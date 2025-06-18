@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Charades Online</title>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <h1>Charades Online</h1>
+  <input id="room" placeholder="Enter room name">
+  <button onclick="joinRoom()">Join Room</button>
+
+  <input id="guess" placeholder="Enter your guess">
+  <button onclick="sendGuess()">Send Guess</button>
+
+  <ul id="messages"></ul>
+
+  <script>
+    const socket = io();
+
+    function joinRoom() {
+      const room = document.getElementById('room').value;
+      socket.emit('joinRoom', room);
+    }
+
+    function sendGuess() {
+      const room = document.getElementById('room').value;
+      const guess = document.getElementById('guess').value;
+      socket.emit('guess', { room, guess });
+    }
+
+    socket.on('message', (msg) => {
+      const li = document.createElement('li');
+      li.innerText = msg;
+      document.getElementById('messages').appendChild(li);
+    });
+
+    socket.on('guessMade', (data) => {
+      const li = document.createElement('li');
+      li.innerText = `${data.player} guessed: ${data.guess}`;
+      document.getElementById('messages').appendChild(li);
+    });
+  </script>
+</body>
+</html>
