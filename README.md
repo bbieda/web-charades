@@ -6,3 +6,4 @@
 - jesli wyrzuci wszystkich graczy i zostanie tylko jeden to gra automatycznie konczy sie
 - system liczenia punktow do samodzielnego ustalenia, np. na podstawie czasu, liczby zgadnięć itd
 - po zakonczeniu gry pokazuje sie punktacja
+pzdr600
