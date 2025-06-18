@@ -24,6 +24,11 @@ io.on('connection', (socket) => {
     io.to(room).emit('guessMade', { player: socket.id, guess });
   });
 
+  socket.on('draw', (data) => {
+    // Emituj do innych w tym samym pokoju (z wyjątkiem nadawcy)
+    socket.to(data.room).emit('draw', data);
+  });
+  
   socket.on('disconnect', () => {
     console.log(`User disconnected: ${socket.id}`);
   });
