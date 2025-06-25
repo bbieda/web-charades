@@ -13,12 +13,15 @@ const io = socketIo(server, {
 app.use(express.static('public'));
 
 const rooms = new Map(); // Map<room, { creator: username, users: Set<username> }>
+const userSockets = new Map(); // Map<username+room, socketId> to track active connections
 
 io.on('connection', (socket) => {
   console.log('A user connected:', socket.id);
 
   socket.on('joinRoom', ({ username, room }) => {
     console.log('joinRoom:', { username, room }); // Debug log
+
+    const userKey = `${username}:${room}`;
 
     // If user is already in this room with this username, just confirm
     if (socket.room === room && socket.username === username) {
@@ -42,18 +45,27 @@ io.on('connection', (socket) => {
       rooms.set(room, { creator: username, users: new Set() });
     }
     const roomData = rooms.get(room);
-    if (roomData.users.has(username)) {
+
+    // Check if username is taken by a different active socket
+    const existingSocketId = userSockets.get(userKey);
+    if (existingSocketId && existingSocketId !== socket.id) {
       socket.emit('joinError', 'Username already taken in this room');
       return;
     }
 
     socket.join(room);
+    const isNewUser = !roomData.users.has(username);
     roomData.users.add(username);
     socket.username = username;
     socket.room = room;
+    userSockets.set(userKey, socket.id);
 
     socket.emit('joinSuccess', { username, room });
-    socket.to(room).emit('systemNotification', `${username} joined the room`);
+
+    // Only send join notification if this is a truly new user
+    if (isNewUser) {
+      socket.to(room).emit('systemNotification', `${username} joined the room`);
+    }
   });
 
   socket.on('guess', (data) => {
@@ -84,16 +96,31 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
     if (socket.room && socket.username) {
-      const roomData = rooms.get(socket.room);
-      if (roomData) {
-        roomData.users.delete(socket.username);
-        if (roomData.users.size === 0) {
-          rooms.delete(socket.room);
-        } else if (roomData.creator === socket.username) {
-          // Reassign creator if the creator leaves
-          roomData.creator = roomData.users.values().next().value || '';
+      const userKey = `${socket.username}:${socket.room}`;
+
+      // Add a delay before removing user to handle quick reconnections
+      setTimeout(() => {
+        // Check if user reconnected with a different socket
+        if (userSockets.get(userKey) === socket.id) {
+          const roomData = rooms.get(socket.room);
+          if (roomData) {
+            roomData.users.delete(socket.username);
+            userSockets.delete(userKey);
+
+            if (roomData.users.size === 0) {
+              rooms.delete(socket.room);
+            } else if (roomData.creator === socket.username) {
+              // Reassign creator if the creator leaves
+              roomData.creator = roomData.users.values().next().value || '';
+            }
+            socket.to(socket.room).emit('systemNotification', `${socket.username} left the room`);
+          }
         }
-        socket.to(socket.room).emit('systemNotification', `${socket.username} left the room`);
+      }, 1000); // Reduced to 1 second delay
+
+      // Immediately clean up the socket mapping if it matches this socket
+      if (userSockets.get(userKey) === socket.id) {
+        userSockets.delete(userKey);
       }
     }
   });
