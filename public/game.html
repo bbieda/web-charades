@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Charades Online - Game</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.10.2/p5.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+  <script src="draw.js"></script>
+  <style>
+    body {
+      background-color: #23222c;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <h1>Charades Online</h1>
+  <p>Room: <span id="room-name"></span> | Username: <span id="username"></span></p>
+  <input id="guess" placeholder="Enter your guess" autocomplete="off">
+  <button onclick="sendGuess()">Send Guess</button>
+  <ul id="messages"></ul>
+</body>
+</html>

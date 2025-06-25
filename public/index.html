@@ -2,53 +2,66 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Charades Online</title>
+  <title>Charades Online - Login</title>
   <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.10.2/p5.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-    <script src="https://kit.fontawesome.com/a076d05399.js"></script>
-    <script src="draw.js"></script>
-    <style>
-      body {
-        background-color: #23222c;
-        color: white;
-      }
-    </style>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <style>
+    body {
+      background-color: #23222c;
+      color: white;
+    }
+  </style>
 </head>
 <body>
   <h1>Charades Online</h1>
-  <input id="room" placeholder="Enter room name">
+  <input id="username" placeholder="Enter your username" autocomplete="off">
+  <input id="room" placeholder="Enter room name" autocomplete="off">
   <button onclick="joinRoom()">Join Room</button>
-
-  <input id="guess" placeholder="Enter your guess">
-  <button onclick="sendGuess()">Send Guess</button>
-
-  <ul id="messages"></ul>
+  <button onclick="getRoomList()">Show Rooms</button>
+  <p id="error" style="color: red;"></p>
+  <ul id="room-list"></ul>
 
   <script>
     const socket = io();
 
     function joinRoom() {
-      const room = document.getElementById('room').value;
-      socket.emit('joinRoom', room);
+      const username = document.getElementById('username').value.trim();
+      const room = document.getElementById('room').value.trim();
+      if (username && room) {
+        socket.emit('joinRoom', { username, room });
+      } else {
+        document.getElementById('error').innerText = 'Please enter both a username and room name';
+      }
     }
 
-    function sendGuess() {
-      const room = document.getElementById('room').value;
-      const guess = document.getElementById('guess').value;
-      socket.emit('guess', { room, guess });
+    function getRoomList() {
+      socket.emit('getRoomList');
     }
 
-    socket.on('message', (msg) => {
-      const li = document.createElement('li');
-      li.innerText = msg;
-      document.getElementById('messages').appendChild(li);
+    socket.on('joinSuccess', ({ username, room }) => {
+      sessionStorage.setItem('username', username);
+      sessionStorage.setItem('room', room);
+      window.location.href = '/game.html';
     });
 
-    socket.on('guessMade', (data) => {
-      const li = document.createElement('li');
-      li.innerText = `${data.player} guessed: ${data.guess}`;
-      document.getElementById('messages').appendChild(li);
+    socket.on('joinError', (message) => {
+      document.getElementById('error').innerText = message;
+    });
+
+    socket.on('roomList', (rooms) => {
+      const roomList = document.getElementById('room-list');
+      roomList.innerHTML = '';
+      if (Object.keys(rooms).length === 0) {
+        const li = document.createElement('li');
+        li.innerText = 'No rooms available';
+        roomList.appendChild(li);
+      } else {
+        for (const [room, creator] of Object.entries(rooms)) {
+          const li = document.createElement('li');
+          li.innerText = `Room: ${room}, Creator: ${creator}`;
+          roomList.appendChild(li);
+        }
+      }
     });
   </script>
 </body>
