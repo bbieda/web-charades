@@ -9,6 +9,9 @@ let currentRoom = '';
 let username = '';
 let lastClearTime = 0;
 let hasJoinedRoom = false;
+let gameStarted = false;
+let isCreator = false;
+let gameTimer = 90;
 
 const socket = io();
 
@@ -24,6 +27,12 @@ function sendGuess() {
     document.getElementById('guess').value = '';
   } else {
     alert('Please enter a guess or ensure you are logged in');
+  }
+}
+
+function startGame() {
+  if (isCreator && currentRoom) {
+    socket.emit('startGame', { room: currentRoom });
   }
 }
 
@@ -59,6 +68,109 @@ socket.on('joinError', (message) => {
   hasJoinedRoom = false;
   window.location.href = '/';
 });
+
+socket.on('gameState', (data) => {
+  gameStarted = data.gameStarted;
+  isCreator = data.isCreator;
+  gameTimer = data.gameTimer;
+
+  // Update timer display
+  updateTimerDisplay();
+
+  // Update user points table
+  updateUserTable(data.userPoints);
+
+  // Show/hide start button based on creator status and game state
+  let startButton = document.getElementById('start-button');
+  if (!startButton && isCreator) {
+    startButton = document.createElement('button');
+    startButton.id = 'start-button';
+    startButton.innerText = 'Start Game';
+    startButton.onclick = startGame;
+    document.body.appendChild(startButton);
+  }
+
+  if (startButton) {
+    if (isCreator && !gameStarted && data.canStart) {
+      startButton.style.display = 'inline-block';
+    } else {
+      startButton.style.display = 'none';
+    }
+  }
+
+  console.log('Game state updated:', { gameStarted, isCreator, canStart: data.canStart });
+});
+
+socket.on('gameStarted', () => {
+  gameStarted = true;
+  const startButton = document.getElementById('start-button');
+  if (startButton) {
+    startButton.style.display = 'none';
+  }
+  console.log('Game started!');
+});
+
+socket.on('gameEnded', () => {
+  gameStarted = false;
+  console.log('Game ended!');
+});
+
+socket.on('timerUpdate', (timeLeft) => {
+  gameTimer = timeLeft;
+  updateTimerDisplay();
+});
+
+socket.on('pointsUpdate', (userPoints) => {
+  updateUserTable(userPoints);
+});
+
+function updateTimerDisplay() {
+  let timerElement = document.getElementById('game-timer');
+  if (!timerElement) {
+    timerElement = document.createElement('div');
+    timerElement.id = 'game-timer';
+    document.body.appendChild(timerElement);
+  }
+
+  const minutes = Math.floor(gameTimer / 60);
+  const seconds = gameTimer % 60;
+  timerElement.innerText = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function updateUserTable(userPoints) {
+  let tableContainer = document.getElementById('user-table-container');
+  if (!tableContainer) {
+    tableContainer = document.createElement('div');
+    tableContainer.id = 'user-table-container';
+    document.body.appendChild(tableContainer);
+  }
+
+  let table = document.getElementById('user-table');
+  if (!table) {
+    table = document.createElement('table');
+    table.id = 'user-table';
+    tableContainer.appendChild(table);
+  }
+
+  // Clear existing table content
+  table.innerHTML = '';
+
+  // Create header
+  const headerRow = table.insertRow();
+  const usernameHeader = headerRow.insertCell();
+  const pointsHeader = headerRow.insertCell();
+  usernameHeader.innerText = 'Username';
+  pointsHeader.innerText = 'Points';
+
+  // Add user data
+  for (const [username, points] of Object.entries(userPoints)) {
+    const row = table.insertRow();
+    const usernameCell = row.insertCell();
+    const pointsCell = row.insertCell();
+    usernameCell.innerText = username;
+    pointsCell.innerText = points;
+  }
+}
 
 socket.on('message', (msg) => {
   console.log('Received message:', msg); // Debug log
@@ -116,7 +228,9 @@ function draw() {
   if (oldpickcolor != picker.value()) {
     kolg = picker.value();
   }
-  if (mouseIsPressed && mouseY > 0 && mouseY < 700) {
+
+  // Only allow drawing if game has started
+  if (mouseIsPressed && mouseY > 0 && mouseY < 700 && gameStarted) {
     strokeWeight(w);
     stroke(kolg);
     line(pmouseX, pmouseY, mouseX, mouseY);
@@ -148,7 +262,8 @@ function draw() {
 
 function clearbackground() {
   if (mouseX > 225 && mouseX < 250 && mouseY > 720 && mouseY < 745) {
-    if (mouseIsPressed && millis() - lastClearTime > 1000) {
+    // Only allow clearing if game has started
+    if (mouseIsPressed && millis() - lastClearTime > 1000 && gameStarted) {
       console.log('Clearing canvas locally and emitting clear event for room:', currentRoom);
       background(255);
       lastClearTime = millis();
@@ -187,13 +302,16 @@ function colors() {
   line(225, 720, 250, 745);
   line(250, 720, 225, 745);
 
-  for (let i = 0; i < 6; i++) {
-    if (mouseIsPressed) {
-      if (mouseX > 50 + i * 25 && mouseX < 75 + i * 25 && mouseY > 720 && mouseY < 745) {
-        kolg = kole[i * 2];
-      }
-      if (mouseX > 50 + i * 25 && mouseX < 75 + i * 25 && mouseY > 745 && mouseY < 770) {
-        kolg = kole[i * 2 + 1];
+  // Only allow color selection if game has started
+  if (gameStarted) {
+    for (let i = 0; i < 6; i++) {
+      if (mouseIsPressed) {
+        if (mouseX > 50 + i * 25 && mouseX < 75 + i * 25 && mouseY > 720 && mouseY < 745) {
+          kolg = kole[i * 2];
+        }
+        if (mouseX > 50 + i * 25 && mouseX < 75 + i * 25 && mouseY > 745 && mouseY < 770) {
+          kolg = kole[i * 2 + 1];
+        }
       }
     }
   }

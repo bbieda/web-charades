@@ -6,13 +6,13 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: '*', // Adjust for production
+    origin: '*',
   }
 });
 
 app.use(express.static('public'));
 
-const rooms = new Map(); // Map<room, { creator: username, users: Set<username> }>
+const rooms = new Map(); // Map<room, { creator: username, users: Set<username>, gameStarted: boolean, userPoints: Map<username, number>, gameTimer: number }>
 const userSockets = new Map(); // Map<username+room, socketId> to track active connections
 
 io.on('connection', (socket) => {
@@ -42,7 +42,7 @@ io.on('connection', (socket) => {
     }
 
     if (!rooms.has(room)) {
-      rooms.set(room, { creator: username, users: new Set() });
+      rooms.set(room, { creator: username, users: new Set(), gameStarted: false, userPoints: new Map(), gameTimer: 90 });
     }
     const roomData = rooms.get(room);
 
@@ -56,32 +56,131 @@ io.on('connection', (socket) => {
     socket.join(room);
     const isNewUser = !roomData.users.has(username);
     roomData.users.add(username);
+    // Initialize points for new user
+    if (!roomData.userPoints.has(username)) {
+      roomData.userPoints.set(username, 0);
+    }
     socket.username = username;
     socket.room = room;
     userSockets.set(userKey, socket.id);
 
     socket.emit('joinSuccess', { username, room });
 
+    // Send game state to the joining user
+    const userPointsObj = Object.fromEntries(roomData.userPoints);
+    socket.emit('gameState', {
+      gameStarted: roomData.gameStarted,
+      isCreator: roomData.creator === username,
+      canStart: roomData.users.size > 1 && !roomData.gameStarted,
+      userPoints: userPointsObj,
+      gameTimer: roomData.gameTimer
+    });
+
     // Only send join notification if this is a truly new user
     if (isNewUser) {
       socket.to(room).emit('systemNotification', `${username} joined the room`);
+      // Update game state for all users in the room
+      const userPointsObj = Object.fromEntries(roomData.userPoints);
+      io.to(room).emit('gameState', {
+        gameStarted: roomData.gameStarted,
+        isCreator: false, // This is for non-creators
+        canStart: roomData.users.size > 1 && !roomData.gameStarted,
+        userPoints: userPointsObj,
+        gameTimer: roomData.gameTimer
+      });
+      // Send specific state to creator
+      const creatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === room);
+      if (creatorSocket) {
+        creatorSocket.emit('gameState', {
+          gameStarted: roomData.gameStarted,
+          isCreator: true,
+          canStart: roomData.users.size > 1 && !roomData.gameStarted,
+          userPoints: userPointsObj,
+          gameTimer: roomData.gameTimer
+        });
+      }
+    }
+  });
+
+  socket.on('startGame', ({ room }) => {
+    const roomData = rooms.get(room);
+    if (roomData && roomData.creator === socket.username && roomData.users.size > 1 && !roomData.gameStarted) {
+      roomData.gameStarted = true;
+      roomData.gameTimer = 90; // Reset timer to 90 seconds
+      io.to(room).emit('gameStarted');
+      io.to(room).emit('systemNotification', 'Game has started! You can now draw.');
+      console.log(`Game started in room: ${room}`);
+
+      // Start the countdown timer
+      const timerInterval = setInterval(() => {
+        roomData.gameTimer--;
+        io.to(room).emit('timerUpdate', roomData.gameTimer);
+
+        if (roomData.gameTimer <= 0) {
+          clearInterval(timerInterval);
+          roomData.gameStarted = false;
+          roomData.gameTimer = 90;
+          io.to(room).emit('gameEnded');
+          io.to(room).emit('systemNotification', 'Time is up! Game ended.');
+
+          // Update game state for all users
+          const userPointsObj = Object.fromEntries(roomData.userPoints);
+          io.to(room).emit('gameState', {
+            gameStarted: false,
+            isCreator: false,
+            canStart: roomData.users.size > 1,
+            userPoints: userPointsObj,
+            gameTimer: roomData.gameTimer
+          });
+          // Send creator state to creator
+          const creatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === room);
+          if (creatorSocket) {
+            creatorSocket.emit('gameState', {
+              gameStarted: false,
+              isCreator: true,
+              canStart: roomData.users.size > 1,
+              userPoints: userPointsObj,
+              gameTimer: roomData.gameTimer
+            });
+          }
+        }
+      }, 1000);
     }
   });
 
   socket.on('guess', (data) => {
     console.log('Received guess:', data); // Debug log
-    io.to(data.room).emit('guessMade', { username: data.username, guess: data.guess });
+    const roomData = rooms.get(data.room);
+    if (roomData && roomData.gameStarted) {
+      // Award point for making a guess (you can modify this logic as needed)
+      roomData.userPoints.set(data.username, (roomData.userPoints.get(data.username) || 0) + 1);
+
+      // Broadcast the guess
+      io.to(data.room).emit('guessMade', { username: data.username, guess: data.guess });
+
+      // Send updated points to all users
+      const userPointsObj = Object.fromEntries(roomData.userPoints);
+      io.to(data.room).emit('pointsUpdate', userPointsObj);
+    }
   });
 
   socket.on('draw', (data) => {
     console.log('Received draw:', data); // Debug log
-    io.to(data.room).emit('draw', data); // Broadcast to all, including sender for consistency
+    const roomData = rooms.get(data.room);
+    // Only allow drawing if game has started
+    if (roomData && roomData.gameStarted) {
+      io.to(data.room).emit('draw', data); // Broadcast to all, including sender for consistency
+    }
   });
 
   socket.on('clear', (data) => {
     console.log('Received clear event for room:', data.room);
-    io.to(data.room).emit('clear');
-    io.to(data.room).emit('systemNotification', `${socket.username} cleared the canvas`);
+    const roomData = rooms.get(data.room);
+    // Only allow clearing if game has started
+    if (roomData && roomData.gameStarted) {
+      io.to(data.room).emit('clear');
+      io.to(data.room).emit('systemNotification', `${socket.username} cleared the canvas`);
+    }
   });
 
   socket.on('getRoomList', () => {
@@ -105,6 +204,7 @@ io.on('connection', (socket) => {
           const roomData = rooms.get(socket.room);
           if (roomData) {
             roomData.users.delete(socket.username);
+            roomData.userPoints.delete(socket.username);
             userSockets.delete(userKey);
 
             if (roomData.users.size === 0) {
@@ -112,6 +212,49 @@ io.on('connection', (socket) => {
             } else if (roomData.creator === socket.username) {
               // Reassign creator if the creator leaves
               roomData.creator = roomData.users.values().next().value || '';
+              // Reset game state when creator leaves
+              roomData.gameStarted = false;
+              roomData.gameTimer = 90;
+              const userPointsObj = Object.fromEntries(roomData.userPoints);
+              io.to(socket.room).emit('gameState', {
+                gameStarted: false,
+                isCreator: false,
+                canStart: roomData.users.size > 1,
+                userPoints: userPointsObj,
+                gameTimer: roomData.gameTimer
+              });
+              // Send creator state to new creator
+              const newCreatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === socket.room);
+              if (newCreatorSocket) {
+                newCreatorSocket.emit('gameState', {
+                  gameStarted: false,
+                  isCreator: true,
+                  canStart: roomData.users.size > 1,
+                  userPoints: userPointsObj,
+                  gameTimer: roomData.gameTimer
+                });
+              }
+            } else {
+              // Update game state for remaining users
+              const userPointsObj = Object.fromEntries(roomData.userPoints);
+              io.to(socket.room).emit('gameState', {
+                gameStarted: roomData.gameStarted,
+                isCreator: false,
+                canStart: roomData.users.size > 1 && !roomData.gameStarted,
+                userPoints: userPointsObj,
+                gameTimer: roomData.gameTimer
+              });
+              // Send creator state to creator
+              const creatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === socket.room);
+              if (creatorSocket) {
+                creatorSocket.emit('gameState', {
+                  gameStarted: roomData.gameStarted,
+                  isCreator: true,
+                  canStart: roomData.users.size > 1 && !roomData.gameStarted,
+                  userPoints: userPointsObj,
+                  gameTimer: roomData.gameTimer
+                });
+              }
             }
             socket.to(socket.room).emit('systemNotification', `${socket.username} left the room`);
           }
