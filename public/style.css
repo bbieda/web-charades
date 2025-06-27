@@ -1,0 +1,33 @@
+body {
+  background-color: #23222c;
+  color: white;
+  font-family: sans-serif;
+}
+
+#word-selection {
+  position: fixed;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  padding: 20px;
+  border: 2px solid #888;
+  border-radius: 8px;
+  text-align: center;
+  z-index: 1000;
+}
+
+#word-selection button {
+  margin: 5px;
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#word-selection button:hover {
+  background-color: #666;
+}

@@ -198,6 +198,30 @@ socket.on('guessMade', (data) => {
   }
 });
 
+// Handle word options for drawing
+socket.on('wordOptions', (words) => {
+  console.log('Received word options:', words);
+
+  let container = document.getElementById('word-selection');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'word-selection';
+    document.body.appendChild(container);
+  }
+
+  container.innerHTML = '<p>Select a word to draw:</p>';
+
+  words.forEach(word => {
+    const btn = document.createElement('button');
+    btn.innerText = word;
+    btn.onclick = () => {
+      socket.emit('selectWord', { room: currentRoom, word });
+      container.remove();
+    };
+    container.appendChild(btn);
+  });
+});
+
 socket.on('draw', (data) => {
   console.log('Received draw:', data); // Debug log
   strokeWeight(data.weight);
