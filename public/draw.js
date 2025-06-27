@@ -11,6 +11,7 @@ let lastClearTime = 0;
 let hasJoinedRoom = false;
 let gameStarted = false;
 let isCreator = false;
+let painter = '';
 let gameTimer = 90;
 
 const socket = io();
@@ -72,8 +73,9 @@ socket.on('joinError', (message) => {
 socket.on('gameState', (data) => {
   gameStarted = data.gameStarted;
   isCreator = data.isCreator;
+  painter = data.painter;
   gameTimer = data.gameTimer;
-
+  
   // Update timer display
   updateTimerDisplay();
 
@@ -93,12 +95,14 @@ socket.on('gameState', (data) => {
   if (startButton) {
     if (isCreator && !gameStarted && data.canStart) {
       startButton.style.display = 'inline-block';
+      
     } else {
       startButton.style.display = 'none';
+      
     }
   }
 
-  console.log('Game state updated:', { gameStarted, isCreator, canStart: data.canStart });
+  console.log('Game state updated:', { gameStarted, isCreator, canStart: data.canStart, painter });
 });
 
 socket.on('gameStarted', () => {
@@ -106,6 +110,7 @@ socket.on('gameStarted', () => {
   const startButton = document.getElementById('start-button');
   if (startButton) {
     startButton.style.display = 'none';
+    console.log(painter);
   }
   console.log('Game started!');
 });
@@ -135,6 +140,9 @@ function updateTimerDisplay() {
   const minutes = Math.floor(gameTimer / 60);
   const seconds = gameTimer % 60;
   timerElement.innerText = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+  if(gameTimer <= 0) {
+    background(255);
+  }
 }
 
 function updateUserTable(userPoints) {
@@ -215,11 +223,14 @@ function setup() {
   background(255);
   canvas.position(560, 110);
   slider = createSlider(1, 80, 40);
-  slider.position(800, 840);
+  slider.position(950, 845);
   canvas.style("z-index: -2");
   picker = createColorPicker();
-  picker.position(700, 840);
+  picker.position(1150, 845);
   updateCursor(slider.value());
+  canvas.style("z-index", "1");
+  picker.style("z-index", "1");
+  slider.style("z-index", "1");
 }
 
 function draw() {
@@ -230,7 +241,7 @@ function draw() {
   }
 
   // Only allow drawing if game has started
-  if (mouseIsPressed && mouseY > 0 && mouseY < 700 && gameStarted) {
+  if (mouseIsPressed && mouseY > 0 && mouseY < 700 && gameStarted && painter === username) {
     strokeWeight(w);
     stroke(kolg);
     line(pmouseX, pmouseY, mouseX, mouseY);
@@ -254,8 +265,8 @@ function draw() {
   stroke(kolg);
   line(725, 750, 725, 750);
 
-  let inSpecialZone = mouseX > 0 && mouseX < 1200 && mouseY > 680 && mouseY < 800;
-  if (inSpecialZone) {
+  let inSpecialZone = mouseX > 0 && mouseX < 1200 && mouseY > 690 && mouseY < 800;
+  if (inSpecialZone || painter!== username) {
     cursor('default');
   }
 }
@@ -308,9 +319,11 @@ function colors() {
       if (mouseIsPressed) {
         if (mouseX > 50 + i * 25 && mouseX < 75 + i * 25 && mouseY > 720 && mouseY < 745) {
           kolg = kole[i * 2];
+          picker.value(kolg);
         }
         if (mouseX > 50 + i * 25 && mouseX < 75 + i * 25 && mouseY > 745 && mouseY < 770) {
           kolg = kole[i * 2 + 1];
+          picker.value(kolg);
         }
       }
     }
@@ -318,6 +331,7 @@ function colors() {
 }
 
 function updateCursor(size) {
+    
   const svg = `
   <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
     <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 1}" fill="${kolg}" stroke="${kolg}" stroke-width="1"/>
@@ -325,4 +339,5 @@ function updateCursor(size) {
   </svg>`;
   const svgUrl = `data:image/svg+xml;base64,${btoa(svg)}`;
   canvas.style('cursor', `url(${svgUrl}) ${size/2} ${size/2}, auto`);
+  
 }

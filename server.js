@@ -22,7 +22,6 @@ io.on('connection', (socket) => {
     console.log('joinRoom:', { username, room }); // Debug log
 
     const userKey = `${username}:${room}`;
-
     // If user is already in this room with this username, just confirm
     if (socket.room === room && socket.username === username) {
       socket.emit('joinSuccess', { username, room });
@@ -42,7 +41,7 @@ io.on('connection', (socket) => {
     }
 
     if (!rooms.has(room)) {
-      rooms.set(room, { creator: username, users: new Set(), gameStarted: false, userPoints: new Map(), gameTimer: 90 });
+      rooms.set(room, { creator: username, painter: username, users: new Set(), gameStarted: false, userPoints: new Map(), gameTimer: 90 });
     }
     const roomData = rooms.get(room);
 
@@ -71,11 +70,12 @@ io.on('connection', (socket) => {
     socket.emit('gameState', {
       gameStarted: roomData.gameStarted,
       isCreator: roomData.creator === username,
+      painter: roomData.painter === username,
       canStart: roomData.users.size > 1 && !roomData.gameStarted,
       userPoints: userPointsObj,
-      gameTimer: roomData.gameTimer
+      gameTimer: roomData.gameTimer,
+      painter: roomData.painter,
     });
-
     // Only send join notification if this is a truly new user
     if (isNewUser) {
       socket.to(room).emit('systemNotification', `${username} joined the room`);
@@ -86,7 +86,8 @@ io.on('connection', (socket) => {
         isCreator: false, // This is for non-creators
         canStart: roomData.users.size > 1 && !roomData.gameStarted,
         userPoints: userPointsObj,
-        gameTimer: roomData.gameTimer
+        gameTimer: roomData.gameTimer,
+        painter: roomData.painter,
       });
       // Send specific state to creator
       const creatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === room);
@@ -96,7 +97,8 @@ io.on('connection', (socket) => {
           isCreator: true,
           canStart: roomData.users.size > 1 && !roomData.gameStarted,
           userPoints: userPointsObj,
-          gameTimer: roomData.gameTimer
+          gameTimer: roomData.gameTimer,
+          painter: roomData.painter,
         });
       }
     }
@@ -110,7 +112,7 @@ io.on('connection', (socket) => {
       io.to(room).emit('gameStarted');
       io.to(room).emit('systemNotification', 'Game has started! You can now draw.');
       console.log(`Game started in room: ${room}`);
-
+      console.log(roomData.users, roomData.creator, '           ', roomData.painter);
       // Start the countdown timer
       const timerInterval = setInterval(() => {
         roomData.gameTimer--;
@@ -120,6 +122,13 @@ io.on('connection', (socket) => {
           clearInterval(timerInterval);
           roomData.gameStarted = false;
           roomData.gameTimer = 90;
+          // Rotate painter to the next user in the set
+          const usersArray = Array.from(roomData.users);
+          const currentPainterIndex = usersArray.indexOf(roomData.painter);
+          const nextPainterIndex = (currentPainterIndex + 1) % usersArray.length;
+          roomData.painter = usersArray[nextPainterIndex];
+          io.to(room).emit('painterUpdate', roomData.painter);
+          console.log('Current painter:', roomData.painter);
           io.to(room).emit('gameEnded');
           io.to(room).emit('systemNotification', 'Time is up! Game ended.');
 
@@ -130,7 +139,8 @@ io.on('connection', (socket) => {
             isCreator: false,
             canStart: roomData.users.size > 1,
             userPoints: userPointsObj,
-            gameTimer: roomData.gameTimer
+            gameTimer: roomData.gameTimer,
+            painter: roomData.painter,
           });
           // Send creator state to creator
           const creatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === room);
@@ -140,7 +150,8 @@ io.on('connection', (socket) => {
               isCreator: true,
               canStart: roomData.users.size > 1,
               userPoints: userPointsObj,
-              gameTimer: roomData.gameTimer
+              gameTimer: roomData.gameTimer,
+              painter: roomData.painter,
             });
           }
         }
@@ -242,7 +253,8 @@ io.on('connection', (socket) => {
                 isCreator: false,
                 canStart: roomData.users.size > 1 && !roomData.gameStarted,
                 userPoints: userPointsObj,
-                gameTimer: roomData.gameTimer
+                gameTimer: roomData.gameTimer,
+                painter: roomData.painter
               });
               // Send creator state to creator
               const creatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === socket.room);
@@ -252,7 +264,8 @@ io.on('connection', (socket) => {
                   isCreator: true,
                   canStart: roomData.users.size > 1 && !roomData.gameStarted,
                   userPoints: userPointsObj,
-                  gameTimer: roomData.gameTimer
+                  gameTimer: roomData.gameTimer,
+                  painter: roomData.painter
                 });
               }
             }
