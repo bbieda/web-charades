@@ -19,6 +19,7 @@ const socket = io();
 function sendGuess() {
   const guess = document.getElementById('guess').value.trim();
   if (guess && currentRoom && username) {
+    if(username !== painter){
     console.log('Emitting guess:', { room: currentRoom, guess, username }); // Debug log
     socket.emit('guess', { room: currentRoom, guess, username });
     // Add local confirmation
@@ -26,6 +27,7 @@ function sendGuess() {
     li.innerText = `${username} guessed: ${guess}`;
     document.getElementById('messages').appendChild(li);
     document.getElementById('guess').value = '';
+    }
   } else {
     alert('Please enter a guess or ensure you are logged in');
   }
@@ -206,6 +208,30 @@ socket.on('guessMade', (data) => {
   }
 });
 
+// Handle word options for drawing
+socket.on('wordOptions', (words) => {
+  console.log('Received word options:', words);
+
+  let container = document.getElementById('word-selection');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'word-selection';
+    document.body.appendChild(container);
+  }
+
+  container.innerHTML = '<p>Select a word to draw:</p>';
+
+  words.forEach(word => {
+    const btn = document.createElement('button');
+    btn.innerText = word;
+    btn.onclick = () => {
+      socket.emit('selectWord', { room: currentRoom, word });
+      container.remove();
+    };
+    container.appendChild(btn);
+  });
+});
+
 socket.on('draw', (data) => {
   console.log('Received draw:', data); // Debug log
   strokeWeight(data.weight);
@@ -272,7 +298,7 @@ function draw() {
 }
 
 function clearbackground() {
-  if (mouseX > 225 && mouseX < 250 && mouseY > 720 && mouseY < 745) {
+  if (mouseX > 225 && mouseX < 250 && mouseY > 720 && mouseY < 745 && painter === username) {
     // Only allow clearing if game has started
     if (mouseIsPressed && millis() - lastClearTime > 1000 && gameStarted) {
       console.log('Clearing canvas locally and emitting clear event for room:', currentRoom);

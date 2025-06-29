@@ -1,6 +1,10 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
+// Load words from JSON file
+const fs = require('fs');
+const words = JSON.parse(fs.readFileSync('./words.json', 'utf8'));
+
 
 const app = express();
 const server = http.createServer(app);
@@ -102,10 +106,37 @@ io.on('connection', (socket) => {
         });
       }
     }
+
+    socket.on('selectWord', ({ room, word }) => {
+      const roomData = rooms.get(room);
+      if (roomData && roomData.painter === socket.username && roomData.gameStarted) {
+        roomData.currentWord = word;
+        io.to(room).emit('systemNotification', `${socket.username} has chosen a word and started drawing!`);
+      }
+    });
+
   });
 
   socket.on('startGame', ({ room }) => {
     const roomData = rooms.get(room);
+
+    // draw a random drawer from the users in the room - TO BE REPLACED WITH A BETTER LOGIC
+    const usersArray = [...roomData.users];
+    const drawer = roomData.painter;
+    roomData.currentDrawer = drawer;
+    
+    const shuffled = [...words].sort(() => 0.5 - Math.random());
+    const wordOptions = shuffled.slice(0, 3);
+    console.log(`Starting game in room: ${room} with drawer: ${drawer} and words: ${wordOptions}`); // Debug log
+
+    const drawerSocketId = userSockets.get(`${drawer}:${room}`);
+    const drawerSocket = io.sockets.sockets.get(drawerSocketId);
+    if (drawerSocket) {
+      drawerSocket.emit('wordOptions', wordOptions);
+    }
+
+    io.to(room).emit('newRound', { drawer });
+
     if (roomData && roomData.creator === socket.username && roomData.users.size > 1 && !roomData.gameStarted) {
       roomData.gameStarted = true;
       roomData.gameTimer = 90; // Reset timer to 90 seconds
@@ -161,7 +192,28 @@ io.on('connection', (socket) => {
 
   socket.on('guess', (data) => {
     console.log('Received guess:', data); // Debug log
+
     const roomData = rooms.get(data.room);
+
+    if (data.guess.trim().toLowerCase() === roomData.currentWord?.toLowerCase()) {
+      io.to(data.room).emit('systemNotification', `${data.username} guessed the correct word!`);
+      roomData.userPoints.set(data.username, (roomData.userPoints.get(data.username) || 0) + 5); // bonus za trafienie
+      roomData.gameStarted = false;
+      roomData.gameTimer = 90;
+      io.to(data.room).emit('gameEnded');
+
+      // Update state
+      const userPointsObj = Object.fromEntries(roomData.userPoints);
+      io.to(data.room).emit('gameState', {
+        gameStarted: false,
+        isCreator: false,
+        canStart: roomData.users.size > 1,
+        userPoints: userPointsObj,
+        gameTimer: roomData.gameTimer
+      });
+      return;
+    }
+
     if (roomData && roomData.gameStarted) {
       // Award point for making a guess (you can modify this logic as needed)
       roomData.userPoints.set(data.username, (roomData.userPoints.get(data.username) || 0) + 1);
