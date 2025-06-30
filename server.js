@@ -45,7 +45,7 @@ io.on('connection', (socket) => {
     }
 
     if (!rooms.has(room)) {
-      rooms.set(room, { creator: username, painter: username, users: new Set(), gameStarted: false, userPoints: new Map(), gameTimer: 90 });
+      rooms.set(room, { creator: username, painter: username, users: new Set(), gameStarted: false, userPoints: new Map(), gameTimer: 90});
     }
     const roomData = rooms.get(room);
 
@@ -199,7 +199,6 @@ io.on('connection', (socket) => {
       io.to(data.room).emit('systemNotification', `${data.username} guessed the correct word!`);
       roomData.userPoints.set(data.username, (roomData.userPoints.get(data.username) || 0) + 5); // bonus za trafienie
       roomData.gameStarted = false;
-      roomData.gameTimer = 90;
       io.to(data.room).emit('gameEnded');
 
       // Update state

@@ -13,6 +13,8 @@ let gameStarted = false;
 let isCreator = false;
 let painter = '';
 let gameTimer = 90;
+let isWordPicked = false;
+
 
 const socket = io();
 
@@ -77,7 +79,7 @@ socket.on('gameState', (data) => {
   isCreator = data.isCreator;
   painter = data.painter;
   gameTimer = data.gameTimer;
-  
+  isWordPicked = data.isWordPicked;
   // Update timer display
   updateTimerDisplay();
 
@@ -227,10 +229,13 @@ socket.on('wordOptions', (words) => {
     btn.onclick = () => {
       socket.emit('selectWord', { room: currentRoom, word });
       container.remove();
+      // Set isWordPicked to true when a word is selected
+      isWordPicked = true;
     };
     container.appendChild(btn);
   });
 });
+
 
 socket.on('draw', (data) => {
   console.log('Received draw:', data); // Debug log
@@ -267,7 +272,8 @@ function draw() {
   }
 
   // Only allow drawing if game has started
-  if (mouseIsPressed && mouseY > 0 && mouseY < 700 && gameStarted && painter === username) {
+  if (mouseIsPressed && mouseY > 0 && mouseY < 700 && gameStarted && painter === username && isWordPicked) {
+    console.log(isWordPicked);
     strokeWeight(w);
     stroke(kolg);
     line(pmouseX, pmouseY, mouseX, mouseY);
