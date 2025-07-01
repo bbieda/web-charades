@@ -46,7 +46,8 @@ io.on('connection', (socket) => {
     }
 
     if (!rooms.has(room)) {
-      rooms.set(room, {
+      rooms.set(room, { 
+
         creator: username,
         painter: username,
         users: new Set(),
@@ -97,8 +98,7 @@ io.on('connection', (socket) => {
       userPoints: userPointsObj,
       gameTimer: roomData.gameTimer,
       painter: roomData.painter,
-      gameWasStartedOnce: roomData.gameWasStartedOnce,
-      maxRounds: roomData.maxRounds
+      gameWasStartedOnce: roomData.gameWasStartedOnce
     });
     // Only send join notification if this is a truly new user
     if (isNewUser) {
@@ -112,9 +112,7 @@ io.on('connection', (socket) => {
         userPoints: userPointsObj,
         gameTimer: roomData.gameTimer,
         painter: roomData.painter,
-        gameWasStartedOnce: roomData.gameWasStartedOnce,
-        maxRounds: roomData.maxRounds
-
+        gameWasStartedOnce: roomData.gameWasStartedOnce
       });
       // Send specific state to creator
       const creatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === room);
@@ -126,9 +124,7 @@ io.on('connection', (socket) => {
           userPoints: userPointsObj,
           gameTimer: roomData.gameTimer,
           painter: roomData.painter,
-          gameWasStartedOnce: roomData.gameWasStartedOnce,
-          maxRounds: roomData.maxRounds
-
+          gameWasStartedOnce: roomData.gameWasStartedOnce
         });
       }
     }
@@ -190,8 +186,7 @@ io.on('connection', (socket) => {
 
           // check if players drew X times
           const allUsersPlayedMaxRounds = Array.from(roomData.users).every(user =>
-/* TU OKRESLAMY ILE RUND GRAMY */  (roomData.roundsPlayed.get(user) || 0) >= roomData.maxRounds
-          );
+/* TU OKRESLAMY ILE RUND GRAMY */  (roomData.roundsPlayed.get(user) || 0) >= roomData.maxRounds);
 
           if (allUsersPlayedMaxRounds) {
             // game ends
@@ -223,9 +218,7 @@ io.on('connection', (socket) => {
             userPoints: userPointsObj,
             gameTimer: roomData.gameTimer,
             painter: roomData.painter,
-            gameWasStartedOnce: roomData.gameWasStartedOnce,
-            maxRounds: roomData.maxRounds
-
+            gameWasStartedOnce: roomData.gameWasStartedOnce
           });
           // Send creator state to creator
           const creatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === room);
@@ -237,9 +230,7 @@ io.on('connection', (socket) => {
               userPoints: userPointsObj,
               gameTimer: roomData.gameTimer,
               painter: roomData.painter,
-              gameWasStartedOnce: roomData.gameWasStartedOnce,
-              maxRounds: roomData.maxRounds
-
+              gameWasStartedOnce: roomData.gameWasStartedOnce
             });
           }
         }
@@ -356,6 +347,14 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('fillSpace', (data) => {
+    console.log('Received fillSpace event:', data); // Debug log
+    const roomData = rooms.get(data.room);
+    if (roomData && roomData.gameStarted) {
+      io.to(data.room).emit('fillSpace', data);
+    }
+  });
+
   socket.on('getRoomList', () => {
     console.log('Sending room list to:', socket.id); // Debug log
     const roomList = {};
@@ -411,9 +410,7 @@ io.on('connection', (socket) => {
             canStart: roomData.users.size > 1,
             userPoints: userPointsObj,
             gameTimer: roomData.gameTimer,
-            gameWasStartedOnce: roomData.gameWasStartedOnce,
-            maxRounds: roomData.maxRounds
-
+            gameWasStartedOnce: roomData.gameWasStartedOnce
           });
           // Send creator state to new creator
           const newCreatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === socket.room);
@@ -424,9 +421,7 @@ io.on('connection', (socket) => {
               canStart: roomData.users.size > 1,
               userPoints: userPointsObj,
               gameTimer: roomData.gameTimer,
-              gameWasStartedOnce: roomData.gameWasStartedOnce,
-              maxRounds: roomData.MaxRounds
-
+              gameWasStartedOnce: roomData.gameWasStartedOnce
             });
           }
         } else {
@@ -439,9 +434,7 @@ io.on('connection', (socket) => {
             userPoints: userPointsObj,
             gameTimer: roomData.gameTimer,
             painter: roomData.painter,
-            gameWasStartedOnce: roomData.gameWasStartedOnce,
-            maxRounds: roomData.maxRounds
-
+            gameWasStartedOnce: roomData.gameWasStartedOnce
           });
           // Send creator state to creator
           const creatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === socket.room);
@@ -453,8 +446,7 @@ io.on('connection', (socket) => {
               userPoints: userPointsObj,
               gameTimer: roomData.gameTimer,
               painter: roomData.painter,
-              gameWasStartedOnce: roomData.gameWasStartedOnce,
-              maxRounds: roomData.maxRounds
+              gameWasStartedOnce: roomData.gameWasStartedOnce
             });
           }
         }
