@@ -15,7 +15,6 @@ let painter = '';
 let gameTimer = 90;
 let isWordPicked = false;
 
-
 const socket = io();
 
 function sendGuess() {
