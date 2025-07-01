@@ -20,14 +20,13 @@ const socket = io();
 function sendGuess() {
   const guess = document.getElementById('guess').value.trim();
   if (guess && currentRoom && username) {
-    if(username !== painter){
-    console.log('Emitting guess:', { room: currentRoom, guess, username }); // Debug log
-    socket.emit('guess', { room: currentRoom, guess, username });
-    // Add local confirmation
-    const li = document.createElement('li');
-    li.innerText = `${username} guessed: ${guess}`;
-    document.getElementById('messages').appendChild(li);
-    document.getElementById('guess').value = '';
+    if (username !== painter) {
+      console.log('Emitting guess:', { room: currentRoom, guess, username });
+      socket.emit('guess', { room: currentRoom, guess, username });
+      const li = document.createElement('li');
+      li.innerText = `${username} guessed: ${guess}`;
+      document.getElementById('messages').appendChild(li);
+      document.getElementById('guess').value = '';
     }
   } else {
     alert('Please enter a guess or ensure you are logged in');
@@ -45,10 +44,9 @@ socket.on('connect', () => {
   currentRoom = sessionStorage.getItem('room') || '';
   username = sessionStorage.getItem('username') || '';
   if (currentRoom && username && !hasJoinedRoom) {
-    console.log('Session loaded:', { currentRoom, username }); // Debug log
+    console.log('Session loaded:', { currentRoom, username });
     document.getElementById('room-name').innerText = currentRoom;
     document.getElementById('username').innerText = username;
-    // Re-join room to ensure socket is in the correct room
     socket.emit('joinRoom', { username, room: currentRoom });
     hasJoinedRoom = true;
   } else if (!currentRoom || !username) {
@@ -64,7 +62,6 @@ socket.on('joinError', (message) => {
     errorMsg.innerText = message;
     overlay.style.display = 'block';
   } else {
-    // fallback
     alert(message);
     window.location.href = '/';
   }
@@ -77,7 +74,7 @@ function goBackToLobby() {
 }
 
 socket.on('joinSuccess', ({ username, room }) => {
-  console.log('Re-joined room:', room); // Debug log
+  console.log('Re-joined room:', room);
   sessionStorage.setItem('username', username);
   sessionStorage.setItem('room', room);
   currentRoom = room;
@@ -91,14 +88,9 @@ socket.on('gameState', (data) => {
   isCreator = data.isCreator;
   painter = data.painter;
   gameTimer = data.gameTimer;
-  isWordPicked = data.isWordPicked;
-  // Update timer display
   updateTimerDisplay();
-
-  // Update user points table
   updateUserTable(data.userPoints);
 
-  // Show/hide start button based on creator status and game state
   let startButton = document.getElementById('start-button');
   if (!startButton && isCreator) {
     startButton = document.createElement('button');
@@ -111,10 +103,8 @@ socket.on('gameState', (data) => {
   if (startButton) {
     if (isCreator && !gameStarted && data.canStart) {
       startButton.style.display = 'inline-block';
-      
     } else {
       startButton.style.display = 'none';
-      
     }
   }
 
@@ -126,13 +116,15 @@ socket.on('gameStarted', () => {
   const startButton = document.getElementById('start-button');
   if (startButton) {
     startButton.style.display = 'none';
-    console.log(painter);
   }
+  document.getElementById('word-display-container').style.display = 'block';
   console.log('Game started!');
 });
 
 socket.on('gameEnded', () => {
   gameStarted = false;
+  document.getElementById('word-display-container').style.display = 'none';
+  document.getElementById('word-display').innerText = '';
   console.log('Game ended!');
 });
 
@@ -145,84 +137,16 @@ socket.on('pointsUpdate', (userPoints) => {
   updateUserTable(userPoints);
 });
 
-function updateTimerDisplay() {
-  let timerElement = document.getElementById('game-timer');
-  if (!timerElement) {
-    timerElement = document.createElement('div');
-    timerElement.id = 'game-timer';
-    document.body.appendChild(timerElement);
-  }
-
-  const minutes = Math.floor(gameTimer / 60);
-  const seconds = gameTimer % 60;
-  timerElement.innerText = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-  if(gameTimer <= 0) {
-    background(255);
-  }
-}
-
-function updateUserTable(userPoints) {
-  let tableContainer = document.getElementById('user-table-container');
-  if (!tableContainer) {
-    tableContainer = document.createElement('div');
-    tableContainer.id = 'user-table-container';
-    document.body.appendChild(tableContainer);
-  }
-
-  let table = document.getElementById('user-table');
-  if (!table) {
-    table = document.createElement('table');
-    table.id = 'user-table';
-    tableContainer.appendChild(table);
-  }
-
-  // Clear existing table content
-  table.innerHTML = '';
-
-  // Create header
-  const headerRow = table.insertRow();
-  const usernameHeader = headerRow.insertCell();
-  const pointsHeader = headerRow.insertCell();
-  usernameHeader.innerText = 'Username';
-  pointsHeader.innerText = 'Points';
-
-  // Add user data
-  for (const [username, points] of Object.entries(userPoints)) {
-    const row = table.insertRow();
-    const usernameCell = row.insertCell();
-    const pointsCell = row.insertCell();
-    usernameCell.innerText = username;
-    pointsCell.innerText = points;
-  }
-}
-
-socket.on('message', (msg) => {
-  console.log('Received message:', msg); // Debug log
-  const li = document.createElement('li');
-  li.innerText = msg;
-  document.getElementById('messages').appendChild(li);
-});
-
-socket.on('systemNotification', (msg) => {
-  console.log('Received system notification:', msg); // Debug log
-  const li = document.createElement('li');
-  li.innerText = msg;
-  li.style.fontStyle = 'italic';
-  li.style.color = '#888';
-  document.getElementById('messages').appendChild(li);
-});
-
-socket.on('guessMade', (data) => {
-  console.log('Received guessMade:', data); // Debug log
-  // Only append if not the sender's guess to avoid duplication
-  if (data.username !== username) {
-    const li = document.createElement('li');
-    li.innerText = `${data.username} guessed: ${data.guess}`;
-    document.getElementById('messages').appendChild(li);
+socket.on('wordUpdate', (data) => {
+  const wordDisplay = document.getElementById('word-display');
+  wordDisplay.innerText = data.word.split('').join(' ');
+  if (gameStarted) {
+    document.getElementById('word-display-container').style.display = 'block';
+  } else {
+    document.getElementById('word-display-container').style.display = 'none';
   }
 });
 
-// Handle word options for drawing
 socket.on('wordOptions', (words) => {
   console.log('Received word options:', words);
 
@@ -241,25 +165,21 @@ socket.on('wordOptions', (words) => {
     btn.onclick = () => {
       socket.emit('selectWord', { room: currentRoom, word });
       container.remove();
-      // Set isWordPicked to true when a word is selected
       isWordPicked = true;
     };
     container.appendChild(btn);
   });
 });
 
-
 socket.on('draw', (data) => {
-  console.log('Received draw:', data); // Debug log
+  console.log('Received draw:', data);
   strokeWeight(data.weight);
   stroke(data.color);
   line(data.x1, data.y1, data.x2, data.y2);
 });
 
 socket.on('fillSpace', (data) => {
-
-    floodFill(data.x, data.y, data.color);
-  
+  floodFill(data.x, data.y, data.color);
 });
 
 socket.on('clear', () => {
@@ -274,9 +194,9 @@ socket.on('gameEndedPlayersLeft', () => {
 
   document.getElementById('user-table-container').style.display = 'none';
   document.getElementById('game-timer').style.display = 'none';
+  document.getElementById('word-display-container').style.display = 'none';
 
   if (!document.getElementById('center-table')) {
-
     let originalTable = document.getElementById('user-table');
     let centerTable = originalTable.cloneNode(true);
 
@@ -306,16 +226,13 @@ socket.on('gameEndedPlayersLeft', () => {
     backButton.style.cursor = 'pointer';
 
     backButton.onclick = function() {
-      // Clear session storage to reset username and room
       sessionStorage.removeItem('username');
       sessionStorage.removeItem('room');
-      // Redirect to index.html (lobby)
       window.location.href = '/index.html';
     };
 
     document.body.appendChild(backButton);
   }
- // alert('Koniec gry - za mało graczy');
 });
 
 socket.on('gameEndedNoRoundsLeft', () => {
@@ -325,10 +242,9 @@ socket.on('gameEndedNoRoundsLeft', () => {
 
   document.getElementById('user-table-container').style.display = 'none';
   document.getElementById('game-timer').style.display = 'none';
-
+  document.getElementById('word-display-container').style.display = 'none';
 
   if (!document.getElementById('center-table')) {
-
     let originalTable = document.getElementById('user-table');
     let centerTable = originalTable.cloneNode(true);
 
@@ -357,16 +273,13 @@ socket.on('gameEndedNoRoundsLeft', () => {
     backButton.style.borderRadius = '5px';
     backButton.style.cursor = 'pointer';
 
-    backButton.onclick = function () {
-      // Clear session storage to reset username and room
+    backButton.onclick = function() {
       sessionStorage.removeItem('username');
       sessionStorage.removeItem('room');
-      // Redirect to index.html (lobby)
       window.location.href = '/index.html';
     };
     document.body.appendChild(backButton);
   }
-  // alert('Koniec gry - kazdy rysowal tyle razy ile powinien');
 });
 
 function setup() {
@@ -391,14 +304,13 @@ function draw() {
     kolg = picker.value();
   }
 
-  // Only allow drawing if game has started
   if (mouseIsPressed && mouseY > 0 && mouseY < 700 && gameStarted && painter === username && isWordPicked) {
     console.log(isWordPicked);
     strokeWeight(w);
     stroke(kolg);
     line(pmouseX, pmouseY, mouseX, mouseY);
     if (currentRoom) {
-      console.log('Emitting draw:', { room: currentRoom, x1: pmouseX, y1: pmouseY, x2: mouseX, y2: mouseY }); // Debug log
+      console.log('Emitting draw:', { room: currentRoom, x1: pmouseX, y1: pmouseY, x2: mouseX, y2: mouseY });
       socket.emit('draw', {
         room: currentRoom,
         x1: pmouseX,
@@ -418,14 +330,13 @@ function draw() {
   line(725, 750, 725, 750);
 
   let inSpecialZone = mouseX > 0 && mouseX < 1200 && mouseY > 690 && mouseY < 800;
-  if (inSpecialZone || painter!== username) {
+  if (inSpecialZone || painter !== username) {
     cursor('default');
   }
 }
 
 function clearbackground() {
   if (mouseX > 225 && mouseX < 250 && mouseY > 720 && mouseY < 745 && painter === username) {
-
     if (mouseIsPressed && millis() - lastClearTime > 1000 && gameStarted) {
       console.log('Clearing canvas locally and emitting clear event for room:', currentRoom);
       background(255);
@@ -465,7 +376,6 @@ function colors() {
   line(225, 720, 250, 745);
   line(250, 720, 225, 745);
 
-  // Only allow color selection if game has started
   if (gameStarted) {
     for (let i = 0; i < 6; i++) {
       if (mouseIsPressed) {
@@ -482,8 +392,55 @@ function colors() {
   }
 }
 
+function updateTimerDisplay() {
+  let timerElement = document.getElementById('game-timer');
+  if (!timerElement) {
+    timerElement = document.createElement('div');
+    timerElement.id = 'game-timer';
+    document.body.appendChild(timerElement);
+  }
+
+  const minutes = Math.floor(gameTimer / 60);
+  const seconds = gameTimer % 60;
+  timerElement.innerText = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+  if (gameTimer <= 0) {
+    background(255);
+  }
+}
+
+function updateUserTable(userPoints) {
+  let tableContainer = document.getElementById('user-table-container');
+  if (!tableContainer) {
+    tableContainer = document.createElement('div');
+    tableContainer.id = 'user-table-container';
+    document.body.appendChild(tableContainer);
+  }
+
+  let table = document.getElementById('user-table');
+  if (!table) {
+    table = document.createElement('table');
+    table.id = 'user-table';
+    tableContainer.appendChild(table);
+  }
+
+  table.innerHTML = '';
+
+  const headerRow = table.insertRow();
+  const usernameHeader = headerRow.insertCell();
+  const pointsHeader = headerRow.insertCell();
+  usernameHeader.innerText = 'Username';
+  pointsHeader.innerText = 'Points';
+
+  for (const [username, points] of Object.entries(userPoints)) {
+    const row = table.insertRow();
+    const usernameCell = row.insertCell();
+    const pointsCell = row.insertCell();
+    usernameCell.innerText = username;
+    pointsCell.innerText = points;
+  }
+}
+
 function updateCursor(size) {
-    
   const svg = `
   <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
     <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 1}" fill="${kolg}" stroke="${kolg}" stroke-width="1"/>
@@ -491,10 +448,7 @@ function updateCursor(size) {
   </svg>`;
   const svgUrl = `data:image/svg+xml;base64,${btoa(svg)}`;
   canvas.style('cursor', `url(${svgUrl}) ${size/2} ${size/2}, auto`);
-  
 }
-
-
 
 let fillMode = false;
 
@@ -575,7 +529,6 @@ function floodFill(x, y, fillColor) {
   updatePixels();
 }
 
-
 const originalSetup = setup;
 setup = function() {
   originalSetup();
@@ -586,7 +539,7 @@ const originalMousePressed = window.mousePressed;
 window.mousePressed = function() {
   if (fillMode && mouseY > 0 && mouseY < 700 && gameStarted && painter === username && isWordPicked) {
     floodFill(mouseX, mouseY, kolg);
-    console.log('Flood fill triggered at:', { x: mouseX, y: mouseY, color: kolg }); // Debug log
+    console.log('Flood fill triggered at:', { x: mouseX, y: mouseY, color: kolg });
     if (currentRoom) {
       console.log('Emitting fillSpace:');
       socket.emit('fillSpace', {
@@ -605,13 +558,11 @@ window.mousePressed = function() {
 };
 
 function showGameEndResults() {
-  // Usuń istniejący modal jeśli istnieje
   const existingModal = document.getElementById('game-end-modal');
   if (existingModal) {
     existingModal.remove();
   }
 
-  // Utwórz modal
   const modal = document.createElement('div');
   modal.id = 'game-end-modal';
   modal.style.cssText = `
@@ -627,7 +578,6 @@ function showGameEndResults() {
     z-index: 9999;
   `;
 
-  // Utwórz kontener z wynikami
   const container = document.createElement('div');
   container.style.cssText = `
     background-color: #333;
@@ -638,7 +588,6 @@ function showGameEndResults() {
     width: 80%;
   `;
 
-  // Tytuł
   const title = document.createElement('h2');
   title.innerText = 'KONIEC GRY - ZA MAŁO GRACZY';
   title.style.cssText = `
@@ -647,7 +596,6 @@ function showGameEndResults() {
     font-size: 24px;
   `;
 
-  // Podtytuł
   const subtitle = document.createElement('h3');
   subtitle.innerText = 'WYNIKI KOŃCOWE';
   subtitle.style.cssText = `
@@ -656,7 +604,6 @@ function showGameEndResults() {
     font-size: 18px;
   `;
 
-  // Tabela wyników
   const table = document.createElement('table');
   table.style.cssText = `
     width: 100%;
@@ -665,7 +612,6 @@ function showGameEndResults() {
     font-size: 16px;
   `;
 
-  // Nagłówek tabeli
   const headerRow = table.insertRow();
   headerRow.style.cssText = `
     background-color: #555;
@@ -689,10 +635,8 @@ function showGameEndResults() {
     font-weight: bold;
   `;
 
-  // Sortuj graczy według punktów
   const sortedPlayers = Object.entries(gameResultsData).sort((a, b) => b[1] - a[1]);
 
-  // Dodaj wiersze z graczami
   sortedPlayers.forEach(([username, points], index) => {
     const row = table.insertRow();
     row.style.cssText = `
@@ -718,7 +662,6 @@ function showGameEndResults() {
     `;
   });
 
-  // Przycisk powrotu do lobby
   const backButton = document.createElement('button');
   backButton.innerText = 'POWRÓT DO LOBBY';
   backButton.style.cssText = `
@@ -741,13 +684,11 @@ function showGameEndResults() {
   };
 
   backButton.onclick = () => {
-    // Wyczyść dane sesji i przekieruj do lobby
     sessionStorage.removeItem('username');
     sessionStorage.removeItem('room');
     window.location.href = '/';
   };
 
-  // Złóż wszystko razem
   container.appendChild(title);
   container.appendChild(subtitle);
   container.appendChild(table);
@@ -755,4 +696,3 @@ function showGameEndResults() {
   modal.appendChild(container);
   document.body.appendChild(modal);
 }
-
