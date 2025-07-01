@@ -243,6 +243,12 @@ socket.on('draw', (data) => {
   line(data.x1, data.y1, data.x2, data.y2);
 });
 
+socket.on('fillSpace', (data) => {
+
+    floodFill(data.x, data.y, data.color);
+  
+});
+
 socket.on('clear', () => {
   console.log('Received clear event, clearing canvas');
   background(255);
@@ -406,7 +412,7 @@ function draw() {
 
 function clearbackground() {
   if (mouseX > 225 && mouseX < 250 && mouseY > 720 && mouseY < 745 && painter === username) {
-    // Only allow clearing if game has started
+
     if (mouseIsPressed && millis() - lastClearTime > 1000 && gameStarted) {
       console.log('Clearing canvas locally and emitting clear event for room:', currentRoom);
       background(255);
@@ -474,6 +480,115 @@ function updateCursor(size) {
   canvas.style('cursor', `url(${svgUrl}) ${size/2} ${size/2}, auto`);
   
 }
+
+
+let fillMode = false;
+
+function addFillButton() {
+  if (!document.getElementById('fill-button')) {
+    const fillBtn = document.createElement('button');
+    fillBtn.id = 'fill-button';
+    fillBtn.innerHTML = '<img src="bucket.png" style="width: 20px; height: 20px;">';
+    fillBtn.style.position = 'absolute';
+    fillBtn.style.left = '900px';
+    fillBtn.style.top = '845px';
+    fillBtn.style.zIndex = '2';
+    fillBtn.onclick = () => {
+      fillMode = !fillMode;
+      fillBtn.style.backgroundColor = fillMode ? '#ccc' : '';
+      if (fillMode) {
+        canvas.style('cursor', 'url("data:image/svg+xml;base64,' + btoa('<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\'><rect width=\'32\' height=\'32\' fill=\'none\'/><path d=\'M8 24l8-8 8 8-8 8z\' fill=\'#000\'/><rect x=\'14\' y=\'4\' width=\'4\' height=\'12\' fill=\'#000\'/></svg>') + '") 16 28, pointer');
+      } else {
+        updateCursor(slider.value());
+      }
+    };
+    document.body.appendChild(fillBtn);
+  }
+}
+
+function floodFill(x, y, fillColor) {
+  loadPixels();
+  const w = width;
+  const h = height;
+  const d = pixelDensity();
+  const pixelsLength = 4 * w * h * d * d;
+
+  function getColorAt(px, py) {
+    const idx = 4 * ((py * d) * w * d + (px * d));
+    return [
+      pixels[idx],
+      pixels[idx + 1],
+      pixels[idx + 2],
+      pixels[idx + 3]
+    ];
+  }
+
+  function setColorAt(px, py, color) {
+    for (let dx = 0; dx < d; dx++) {
+      for (let dy = 0; dy < d; dy++) {
+        const idx = 4 * (((py * d + dy) * w * d) + (px * d + dx));
+        pixels[idx] = color[0];
+        pixels[idx + 1] = color[1];
+        pixels[idx + 2] = color[2];
+        pixels[idx + 3] = color[3];
+      }
+    }
+  }
+
+  function colorsMatch(a, b) {
+    return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
+  }
+
+  const startColor = getColorAt(x, y);
+  const fillCol = color(fillColor);
+  const fillArr = [red(fillCol), green(fillCol), blue(fillCol), 255];
+
+  if (colorsMatch(startColor, fillArr)) return;
+
+  const stack = [[x, y]];
+  while (stack.length > 0) {
+    const [cx, cy] = stack.pop();
+    if (cx < 0 || cy < 0 || cx >= w || cy >= h) continue;
+    const currColor = getColorAt(cx, cy);
+    if (colorsMatch(currColor, startColor)) {
+      setColorAt(cx, cy, fillArr);
+      stack.push([cx + 1, cy]);
+      stack.push([cx - 1, cy]);
+      stack.push([cx, cy + 1]);
+      stack.push([cx, cy - 1]);
+    }
+  }
+  updatePixels();
+}
+
+
+const originalSetup = setup;
+setup = function() {
+  originalSetup();
+  addFillButton();
+};
+
+const originalMousePressed = window.mousePressed;
+window.mousePressed = function() {
+  if (fillMode && mouseY > 0 && mouseY < 700 && gameStarted && painter === username && isWordPicked) {
+    floodFill(mouseX, mouseY, kolg);
+    console.log('Flood fill triggered at:', { x: mouseX, y: mouseY, color: kolg }); // Debug log
+    if (currentRoom) {
+      console.log('Emitting fillSpace:');
+      socket.emit('fillSpace', {
+        room: currentRoom,
+        x: mouseX,
+        y: mouseY,
+        color: kolg
+      });
+    }
+    fillMode = false;
+    document.getElementById('fill-button').style.backgroundColor = '';
+    updateCursor(slider.value());
+    return;
+  }
+  if (typeof originalMousePressed === 'function') originalMousePressed();
+};
 
 function showGameEndResults() {
   // Usuń istniejący modal jeśli istnieje
