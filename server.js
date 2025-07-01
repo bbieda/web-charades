@@ -146,6 +146,11 @@ io.on('connection', (socket) => {
   socket.on('startGame', ({ room }) => {
     const roomData = rooms.get(room);
 
+    if (!roomData) {
+      console.warn(`startGame: room ${room} not found`);
+      return;
+    }
+
     roomData.guessedCorrectly.clear(); // Clear guessed users for the new round
     const usersArray = [...roomData.users];
     const drawer = roomData.painter;
@@ -246,6 +251,11 @@ io.on('connection', (socket) => {
     console.log('Received guess:', data); // Debug log
 
     const roomData = rooms.get(data.room);
+
+    if (roomData.guessedCorrectly.has(data.username)) {
+      socket.emit('chatBlocked', 'You have already guessed the word correctly. Wait for the next round.');
+      return;
+    }
 
     if (data.guess.trim().toLowerCase() === roomData.currentWord?.toLowerCase()) {
       if (!roomData.guessedCorrectly.has(data.username)) {
