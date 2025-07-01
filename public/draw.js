@@ -57,6 +57,25 @@ socket.on('connect', () => {
   }
 });
 
+socket.on('joinError', (message) => {
+  const overlay = document.getElementById('error-overlay');
+  const errorMsg = document.getElementById('error-message');
+  if (overlay && errorMsg) {
+    errorMsg.innerText = message;
+    overlay.style.display = 'block';
+  } else {
+    // fallback
+    alert(message);
+    window.location.href = '/';
+  }
+});
+
+function goBackToLobby() {
+  sessionStorage.removeItem('username');
+  sessionStorage.removeItem('room');
+  window.location.href = '/';
+}
+
 socket.on('joinSuccess', ({ username, room }) => {
   console.log('Re-joined room:', room); // Debug log
   sessionStorage.setItem('username', username);
@@ -65,12 +84,6 @@ socket.on('joinSuccess', ({ username, room }) => {
   document.getElementById('room-name').innerText = currentRoom;
   document.getElementById('username').innerText = username;
   hasJoinedRoom = true;
-});
-
-socket.on('joinError', (message) => {
-  alert(message);
-  hasJoinedRoom = false;
-  window.location.href = '/';
 });
 
 socket.on('gameState', (data) => {
@@ -482,6 +495,7 @@ function updateCursor(size) {
 }
 
 
+
 let fillMode = false;
 
 function addFillButton() {
@@ -741,3 +755,4 @@ function showGameEndResults() {
   modal.appendChild(container);
   document.body.appendChild(modal);
 }
+
