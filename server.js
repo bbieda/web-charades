@@ -376,7 +376,7 @@ io.on('connection', (socket) => {
             painter: roomData.painter,
             gameWasStartedOnce: roomData.gameWasStartedOnce,
             maxRounds: roomData.maxRounds
-
+              
           });
           // Send creator state to creator
           const creatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === socket.room);

@@ -10,11 +10,124 @@
   <script src="https://kit.fontawesome.com/a076d05399.js"></script>
   <script src="draw.js"></script>
 </head>
-<body>
-  <h1>Charades Online</h1>
-  <p>Room: <span id="room-name"></span> | Username: <span id="username"></span></p>
-  <input id="guess" placeholder="Enter your guess" autocomplete="off">
-  <button onclick="sendGuess()">Send Guess</button>
-  <ul id="messages"></ul>
+<body class="game-page">
+  <div id="star-background"></div>
+  
+  <div class="game-header">
+    <h1 class="game-title">Charades Online</h1>
+    <div class="game-info">
+      <div>Room: <span id="room-name"></span></div>
+      <div>Username: <span id="username"></span></div>
+    </div>
+  </div>
+
+  <!-- Dodana sekcja z czasem i punktami -->
+  <div class="game-stats">
+    <div class="timer-section">
+      <div class="timer-label">Time</div>
+      <div class="timer-value" id="timer">1:30</div>
+    </div>
+    <div class="points-section">
+      <div class="points-label">Username Points</div>
+      <div class="points-list" id="points-list">
+        <!-- Punkty będą dodawane dynamicznie -->
+        <div class="points-item">
+          <div class="player-name">kuras</div>
+          <div class="player-points">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="game-content">
+    <div class="drawing-section">
+      <div id="drawing-canvas"></div>
+      <div class="drawing-tools">
+        <button class="tool-btn" id="clear-btn"><i class="fas fa-broom"></i></button>
+        <button class="tool-btn" id="undo-btn"><i class="fas fa-undo"></i></button>
+        <input type="color" class="tool-btn" id="color-picker" title="Select color">
+        <input type="range" id="brush-size" min="1" max="50" value="5" title="Brush size">
+      </div>
+    </div>
+    
+    <div class="chat-section">
+      <ul id="messages"></ul>
+      <div class="guess-form">
+        <input id="guess" placeholder="Enter your guess" autocomplete="off">
+        <button class="send-guess-btn" onclick="sendGuess()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Create starry background
+    function createStars() {
+      const container = document.getElementById('star-background');
+      const starsCount = 150;
+      
+      for (let i = 0; i < starsCount; i++) {
+        const star = document.createElement('div');
+        star.classList.add('star');
+        
+        const size = Math.random() * 3;
+        const posX = Math.random() * 100;
+        const posY = Math.random() * 100;
+        const duration = Math.random() * 5 + 3;
+        const delay = Math.random() * 5;
+        
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.left = `${posX}%`;
+        star.style.top = `${posY}%`;
+        star.style.animationDuration = `${duration}s`;
+        star.style.animationDelay = `${delay}s`;
+        star.style.setProperty('--duration', `${duration}s`);
+        
+        container.appendChild(star);
+      }
+      
+      for (let i = 0; i < 5; i++) {
+        const fallingStar = document.createElement('div');
+        fallingStar.classList.add('star');
+        fallingStar.style.width = '2px';
+        fallingStar.style.height = '20px';
+        fallingStar.style.left = `${Math.random() * 100}%`;
+        fallingStar.style.top = '-20px';
+        fallingStar.style.animation = `fall ${Math.random() * 10 + 5}s linear infinite`;
+        fallingStar.style.animationDelay = `${Math.random() * 5}s`;
+        fallingStar.style.opacity = '0.7';
+        fallingStar.style.borderRadius = '50% 50% 0 0';
+        container.appendChild(fallingStar);
+      }
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      createStars();
+      
+      // Display user info
+      document.getElementById('room-name').innerText = sessionStorage.getItem('room');
+      document.getElementById('username').innerText = sessionStorage.getItem('username');
+      
+      // Initialize canvas - ważne, aby canvas był zainicjalizowany po załadowaniu DOM
+      initCanvas();
+    });
+    
+    function initCanvas() {
+      // Tu umieść kod inicjalizujący canvas z draw.js
+      // Przykładowo:
+      const canvas = createCanvas(windowWidth * 0.6, windowHeight * 0.6);
+      canvas.parent('drawing-canvas');
+      background(25, 25, 35);
+      // ... reszta inicjalizacji
+    }
+    
+    function sendGuess() {
+      const guess = document.getElementById('guess').value.trim();
+      if (guess) {
+        // Your existing sendGuess implementation
+        document.getElementById('guess').value = '';
+      }
+    }
+  </script>
 </body>
 </html>

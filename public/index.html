@@ -7,53 +7,137 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 </head>
-<body>
-  <h1>Charades Online</h1>
-  <input id="username" placeholder="Enter your username" autocomplete="off">
-  <input id="room" placeholder="Enter room name" autocomplete="off">
-  <button onclick="joinRoom()">Join Room</button>
-  <button onclick="getRoomList()">Show Rooms</button>
-  <p id="error" style="color: red;"></p>
-  <ul id="room-list"></ul>
+<body class="login-page">
+  <div id="star-background"></div>
+  
+  <div class="game-container">
+    <div class="game-header">
+      <div class="game-logo">
+        <i class="fas fa-theater-masks"></i>
+      </div>
+      <h1 class="game-title">Charades Online</h1>
+      <p class="game-subtitle">Act it out, guess it right!</p>
+    </div>
+    
+    <div class="game-form">
+      <div class="input-group">
+        <i class="fas fa-user"></i>
+        <input type="text" id="username" class="game-input" placeholder="Enter your username" autocomplete="off">
+      </div>
+      
+      <div class="input-group">
+        <i class="fas fa-door-open"></i>
+        <input type="text" id="room" class="game-input" placeholder="Enter room name" autocomplete="off">
+      </div>
+      
+      <div class="btn-group">
+        <button class="game-btn btn-primary" onclick="joinRoom()">
+          <i class="fas fa-play"></i> Join Room
+        </button>
+        <button class="game-btn btn-secondary" onclick="getRoomList()">
+          <i class="fas fa-list"></i> Show Rooms
+        </button>
+      </div>
+      
+      <p id="error"></p>
+    </div>
+    
+    <div class="room-list-container">
+      <h3 class="room-list-title">Available Rooms</h3>
+      <ul id="room-list"></ul>
+    </div>
+  </div>
 
   <script>
+    // Create starry background
+    function createStars() {
+      const container = document.getElementById('star-background');
+      const starsCount = 150;
+      
+      for (let i = 0; i < starsCount; i++) {
+        const star = document.createElement('div');
+        star.classList.add('star');
+        
+        // Random properties for each star
+        const size = Math.random() * 3;
+        const posX = Math.random() * 100;
+        const posY = Math.random() * 100;
+        const duration = Math.random() * 5 + 3;
+        const delay = Math.random() * 5;
+        
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.left = `${posX}%`;
+        star.style.top = `${posY}%`;
+        star.style.animationDuration = `${duration}s`;
+        star.style.animationDelay = `${delay}s`;
+        star.style.setProperty('--duration', `${duration}s`);
+        
+        container.appendChild(star);
+      }
+      
+      // Add some falling stars
+      for (let i = 0; i < 5; i++) {
+        const fallingStar = document.createElement('div');
+        fallingStar.classList.add('star');
+        fallingStar.style.width = '2px';
+        fallingStar.style.height = '20px';
+        fallingStar.style.left = `${Math.random() * 100}%`;
+        fallingStar.style.top = '-20px';
+        fallingStar.style.animation = `fall ${Math.random() * 10 + 5}s linear infinite`;
+        fallingStar.style.animationDelay = `${Math.random() * 5}s`;
+        fallingStar.style.opacity = '0.7';
+        fallingStar.style.borderRadius = '50% 50% 0 0';
+        container.appendChild(fallingStar);
+      }
+    }
+    
+    // Initialize socket and stars
     const socket = io();
-
+    document.addEventListener('DOMContentLoaded', createStars);
+    
+    // Room functions
     function joinRoom() {
       const username = document.getElementById('username').value.trim();
       const room = document.getElementById('room').value.trim();
+      
       if (username && room) {
         socket.emit('joinRoom', { username, room });
       } else {
         document.getElementById('error').innerText = 'Please enter both a username and room name';
       }
     }
-
+    
     function getRoomList() {
       socket.emit('getRoomList');
     }
-
+    
+    // Socket event handlers
     socket.on('joinSuccess', ({ username, room }) => {
       sessionStorage.setItem('username', username);
       sessionStorage.setItem('room', room);
       window.location.href = '/game.html';
     });
-
+    
     socket.on('joinError', (message) => {
       document.getElementById('error').innerText = message;
     });
-
+    
     socket.on('roomList', (rooms) => {
       const roomList = document.getElementById('room-list');
       roomList.innerHTML = '';
+      
       if (Object.keys(rooms).length === 0) {
         const li = document.createElement('li');
-        li.innerText = 'No rooms available';
+        li.innerText = 'No rooms available. Create one!';
         roomList.appendChild(li);
       } else {
         for (const [room, creator] of Object.entries(rooms)) {
           const li = document.createElement('li');
-          li.innerText = `Room: ${room}, Creator: ${creator}`;
+          li.innerHTML = `
+            <span class="room-name">${room}</span>
+            <span class="room-creator">Creator: ${creator}</span>
+          `;
           roomList.appendChild(li);
         }
       }
