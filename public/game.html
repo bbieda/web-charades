@@ -21,35 +21,27 @@
     </div>
   </div>
 
-  <!-- Dodana sekcja z czasem i punktami -->
-  <div class="game-stats">
-    <div class="timer-section">
-      <div class="timer-label">Time</div>
-      <div class="timer-value" id="timer">1:30</div>
-    </div>
-    <div class="points-section">
-      <div class="points-label">Username Points</div>
-      <div class="points-list" id="points-list">
-        <!-- Punkty będą dodawane dynamicznie -->
-        <div class="points-item">
-          <div class="player-name">kuras</div>
-          <div class="player-points">0</div>
-        </div>
+  <div class="main-content">
+    <!-- Lewa kolumna - Statystyki -->
+    <div class="game-stats">
+      <div class="timer-section">
+        <div class="timer-label">Time</div>
+        <div id="game-timer">1:30</div>
       </div>
-    </div>
-  </div>
-  
-  <div class="game-content">
-    <div class="drawing-section">
-      <div id="drawing-canvas"></div>
-      <div class="drawing-tools">
-        <button class="tool-btn" id="clear-btn"><i class="fas fa-broom"></i></button>
-        <button class="tool-btn" id="undo-btn"><i class="fas fa-undo"></i></button>
-        <input type="color" class="tool-btn" id="color-picker" title="Select color">
-        <input type="range" id="brush-size" min="1" max="50" value="5" title="Brush size">
+      <div class="points-section">
+        <div class="points-label">Players Points</div>
+        <div id="user-table-container"></div>
       </div>
     </div>
     
+    <!-- Środkowa kolumna - Canvas -->
+    <div class="canvas-container">
+      <!-- Kontener na przyciski gry -->
+      <div id="game-controls"></div>
+      <!-- Canvas zostanie utworzony przez p5.js -->
+    </div>
+    
+    <!-- Prawa kolumna - Czat -->
     <div class="chat-section">
       <ul id="messages"></ul>
       <div class="guess-form">
@@ -85,20 +77,6 @@
         
         container.appendChild(star);
       }
-      
-      for (let i = 0; i < 5; i++) {
-        const fallingStar = document.createElement('div');
-        fallingStar.classList.add('star');
-        fallingStar.style.width = '2px';
-        fallingStar.style.height = '20px';
-        fallingStar.style.left = `${Math.random() * 100}%`;
-        fallingStar.style.top = '-20px';
-        fallingStar.style.animation = `fall ${Math.random() * 10 + 5}s linear infinite`;
-        fallingStar.style.animationDelay = `${Math.random() * 5}s`;
-        fallingStar.style.opacity = '0.7';
-        fallingStar.style.borderRadius = '50% 50% 0 0';
-        container.appendChild(fallingStar);
-      }
     }
     
     document.addEventListener('DOMContentLoaded', () => {
@@ -107,27 +85,7 @@
       // Display user info
       document.getElementById('room-name').innerText = sessionStorage.getItem('room');
       document.getElementById('username').innerText = sessionStorage.getItem('username');
-      
-      // Initialize canvas - ważne, aby canvas był zainicjalizowany po załadowaniu DOM
-      initCanvas();
     });
-    
-    function initCanvas() {
-      // Tu umieść kod inicjalizujący canvas z draw.js
-      // Przykładowo:
-      const canvas = createCanvas(windowWidth * 0.6, windowHeight * 0.6);
-      canvas.parent('drawing-canvas');
-      background(25, 25, 35);
-      // ... reszta inicjalizacji
-    }
-    
-    function sendGuess() {
-      const guess = document.getElementById('guess').value.trim();
-      if (guess) {
-        // Your existing sendGuess implementation
-        document.getElementById('guess').value = '';
-      }
-    }
   </script>
 </body>
 </html>
