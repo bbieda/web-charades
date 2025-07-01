@@ -26,6 +26,7 @@ io.on('connection', (socket) => {
     console.log('joinRoom:', { username, room }); // Debug log
 
     const userKey = `${username}:${room}`;
+
     // If user is already in this room with this username, just confirm
     if (socket.room === room && socket.username === username) {
       socket.emit('joinSuccess', { username, room });
@@ -45,7 +46,8 @@ io.on('connection', (socket) => {
     }
 
     if (!rooms.has(room)) {
-      rooms.set(room, { creator: username,
+      rooms.set(room, {
+        creator: username,
         painter: username,
         users: new Set(),
         gameStarted: false,
@@ -53,10 +55,17 @@ io.on('connection', (socket) => {
         gameTimer: 90,
         gameWasStartedOnce: false,
         roundsPlayed: new Map(),
-        maxRounds: 3
+        maxRounds: 3,
+        guessedCorrectly: new Set() // <- użytkownicy którzy odgadli słowo w tej rundzie
       });
     }
+
     const roomData = rooms.get(room);
+
+    if (roomData && roomData.gameStarted) {
+      socket.emit('joinError', 'Game already in progress');
+      return;
+    }
 
     // Check if username is taken by a different active socket
     const existingSocketId = userSockets.get(userKey);
@@ -137,7 +146,7 @@ io.on('connection', (socket) => {
   socket.on('startGame', ({ room }) => {
     const roomData = rooms.get(room);
 
-    // draw a random drawer from the users in the room - TO BE REPLACED WITH A BETTER LOGIC
+    roomData.guessedCorrectly.clear(); // Clear guessed users for the new round
     const usersArray = [...roomData.users];
     const drawer = roomData.painter;
     roomData.currentDrawer = drawer;
@@ -239,23 +248,69 @@ io.on('connection', (socket) => {
     const roomData = rooms.get(data.room);
 
     if (data.guess.trim().toLowerCase() === roomData.currentWord?.toLowerCase()) {
-      io.to(data.room).emit('systemNotification', `${data.username} guessed the correct word!`);
-      roomData.userPoints.set(data.username, (roomData.userPoints.get(data.username) || 0) + 5); // bonus za trafienie
-      roomData.gameStarted = false;
-      io.to(data.room).emit('gameEnded');
+      if (!roomData.guessedCorrectly.has(data.username)) {
+        roomData.guessedCorrectly.add(data.username);
+        roomData.userPoints.set(data.username, (roomData.userPoints.get(data.username) || 0) + 5); // bonus za trafienie
+        io.to(data.room).emit('systemNotification', `${data.username} guessed the correct word!`);
+      }
 
-      // Update state
-      const userPointsObj = Object.fromEntries(roomData.userPoints);
-      io.to(data.room).emit('gameState', {
-        gameStarted: false,
-        isCreator: false,
-        canStart: roomData.users.size > 1,
-        userPoints: userPointsObj,
-        gameTimer: roomData.gameTimer,
-        gameWasStartedOnce: roomData.gameWasStartedOnce,
-        maxRounds: roomData.maxRounds
+      const nonPainterUsers = [...roomData.users].filter(u => u !== roomData.painter);
+      const allGuessed = nonPainterUsers.every(u => roomData.guessedCorrectly.has(u));
 
-      });
+      if (allGuessed) {
+        // zakończ rundę jak wcześniej (przepisz logikę z końca timera)
+        roomData.gameStarted = false;
+        roomData.gameTimer = 0;
+
+        // zwiększ liczbę rund
+        const currentRounds = roomData.roundsPlayed.get(roomData.painter) || 0;
+        roomData.roundsPlayed.set(roomData.painter, currentRounds + 1);
+
+        const allUsersPlayedMaxRounds = Array.from(roomData.users).every(user =>
+          (roomData.roundsPlayed.get(user) || 0) >= roomData.maxRounds
+        );
+
+        if (allUsersPlayedMaxRounds) {
+          io.to(data.room).emit('gameEndedNoRoundsLeft');
+          return;
+        } 
+
+        // Rotate painter
+        const usersArray = Array.from(roomData.users);
+        const currentPainterIndex = usersArray.indexOf(roomData.painter);
+        const nextPainterIndex = (currentPainterIndex + 1) % usersArray.length;
+        roomData.painter = usersArray[nextPainterIndex];
+
+        io.to(data.room).emit('painterUpdate', roomData.painter);
+        io.to(data.room).emit('gameEnded');
+        io.to(data.room).emit('systemNotification', 'Everyone guessed! Round ended.');
+
+        const userPointsObj = Object.fromEntries(roomData.userPoints);
+        io.to(data.room).emit('gameState', {
+          gameStarted: false,
+          isCreator: false,
+          canStart: roomData.users.size > 1,
+          userPoints: userPointsObj,
+          gameTimer: roomData.gameTimer,
+          painter: roomData.painter,
+          gameWasStartedOnce: roomData.gameWasStartedOnce,
+          maxRounds: roomData.maxRounds
+        });
+
+        const creatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === data.room);
+        if (creatorSocket) {
+          creatorSocket.emit('gameState', {
+            gameStarted: false,
+            isCreator: true,
+            canStart: roomData.users.size > 1,
+            userPoints: userPointsObj,
+            gameTimer: roomData.gameTimer,
+            painter: roomData.painter,
+            gameWasStartedOnce: roomData.gameWasStartedOnce,
+            maxRounds: roomData.maxRounds
+          });
+        }
+      }
       return;
     }
 
