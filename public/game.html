@@ -11,10 +11,20 @@
   <script src="draw.js"></script>
 </head>
 <body>
-  <h1>Charades Online</h1>
-  <p>Room: <span id="room-name"></span> | Username: <span id="username"></span></p>
-  <input id="guess" placeholder="Enter your guess" autocomplete="off">
-  <button onclick="sendGuess()">Send Guess</button>
-  <ul id="messages"></ul>
+  <div id="word-display-container" style="position: fixed; top: 0; left: 50%; transform: translateX(-50%); text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+    <h2>Word to guess:</h2>
+    <div id="word-display" style="display: inline-block;"></div>
+  </div>
+
+  <div style="margin-top: 120px;">
+    <h1>Charades Online</h1>
+    <p>Room: <span id="room-name"></span> | Username: <span id="username"></span></p>
+
+    <div id="canvas-container"></div>
+
+    <input id="guess" placeholder="Enter your guess" autocomplete="off">
+    <button onclick="sendGuess()">Send Guess</button>
+    <ul id="messages"></ul>
+  </div>
 </body>
 </html>
