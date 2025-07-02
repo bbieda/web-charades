@@ -228,6 +228,8 @@ socket.on('message', (msg) => {
   const li = document.createElement('li');
   li.innerText = msg;
   document.getElementById('messages').appendChild(li);
+  const messagesEl = document.getElementById('messages');
+  messagesEl.scrollTop = messagesEl.scrollHeight;
 });
 
 socket.on('systemNotification', (msg) => {
@@ -246,6 +248,8 @@ socket.on('guessMade', (data) => {
     const li = document.createElement('li');
     li.innerText = `${data.username} guessed: ${data.guess}`;
     document.getElementById('messages').appendChild(li);
+    const messagesEl = document.getElementById('messages');
+    messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 });
 
@@ -332,6 +336,10 @@ socket.on('gameEndedPlayersLeft', () => {
 });
 
 socket.on('gameEndedNoRoundsLeft', () => {
+  const overlay = document.createElement('div');
+  overlay.className = 'end-game-overlay';
+  document.body.appendChild(overlay);
+
   canvas.hide();
   slider.hide();
   picker.hide();
@@ -339,22 +347,12 @@ socket.on('gameEndedNoRoundsLeft', () => {
   document.getElementById('user-table-container').style.display = 'none';
   document.getElementById('game-timer').style.display = 'none';
 
-
   if (!document.getElementById('center-table')) {
-
     let originalTable = document.getElementById('user-table');
     let centerTable = originalTable.cloneNode(true);
 
     centerTable.id = 'center-table';
-    centerTable.style.position = 'absolute';
-    centerTable.style.left = '50%';
-    centerTable.style.top = '50%';
-    centerTable.style.transform = 'translate(-50%, -50%)';
-    centerTable.style.fontSize = '48px';
-    centerTable.style.border = '2px solid black';
-    centerTable.style.borderCollapse = 'collapse';
-    centerTable.style.padding = '30px';
-
+    centerTable.className = 'end-game-table'; // Dodajemy klasę dla stylowania
     document.body.appendChild(centerTable);
   }
 
@@ -362,24 +360,16 @@ socket.on('gameEndedNoRoundsLeft', () => {
     let backButton = document.createElement('button');
     backButton.id = 'back-to-lobby-btn';
     backButton.textContent = 'Powrót do lobby';
-    backButton.style.position = 'absolute';
-    backButton.style.left = '50%';
-    backButton.style.top = '60%';
-    backButton.style.transform = 'translateX(-50%)';
-    backButton.style.fontSize = '18px';
-    backButton.style.borderRadius = '5px';
-    backButton.style.cursor = 'pointer';
-
-    backButton.onclick = function () {
-      // Clear session storage to reset username and room
+    backButton.className = 'end-game-button'; // Dodajemy klasę dla stylowania
+    
+    backButton.onclick = function() {
       sessionStorage.removeItem('username');
       sessionStorage.removeItem('room');
-      // Redirect to index.html (lobby)
       window.location.href = '/index.html';
     };
+
     document.body.appendChild(backButton);
   }
-  // alert('Koniec gry - kazdy rysowal tyle razy ile powinien');
 });
 
 function setup() {

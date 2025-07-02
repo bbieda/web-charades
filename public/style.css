@@ -296,6 +296,31 @@ canvas {
   text-shadow: 0 0 10px #ffcc00;
 }
 
+.word-section {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: inset 0 0 10px rgba(255, 204, 0, 0.2);
+  text-align: center;
+  margin-top: 20px;
+}
+
+.word-section .timer-label {
+  font-size: 1.2rem;
+  color: #ffd633;
+  text-shadow: 0 0 5px #ffd633aa;
+  margin-bottom: 0.5rem;
+}
+
+#word-display {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 10px #ffcc00;
+}
+
+
+
 .points-list {
   max-height: 300px;
   overflow-y: auto;
