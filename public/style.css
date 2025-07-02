@@ -365,7 +365,7 @@ canvas {
   cursor: pointer;
   z-index: 50;
   box-shadow: 0 5px 20px rgba(255, 204, 0, 0.5);
-  transition: all 0.3s ease;
+  /*transition: all 0.3s ease;*/
 }
 
 
