@@ -187,7 +187,7 @@ io.on('connection', (socket) => {
     if (roomData && roomData.creator === socket.username && roomData.users.size > 1 && !roomData.gameStarted) {
       roomData.gameStarted = true;
       roomData.gameWasStartedOnce = true;
-      roomData.gameTimer = 30; // Reset timer to 90 seconds
+      roomData.gameTimer = 90; // Reset timer to 90 seconds
       io.to(room).emit('gameStarted');
       io.to(room).emit('systemNotification', 'Game has started! You can now draw.');
       console.log(`Game started in room: ${room}`);
