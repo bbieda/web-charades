@@ -165,56 +165,63 @@ socket.on('pointsUpdate', (userPoints) => {
       }
     });
 
-function updateTimerDisplay() {
-  let timerElement = document.getElementById('game-timer');
-  if (!timerElement) {
-    timerElement = document.createElement('div');
-    timerElement.id = 'game-timer';
-    document.body.appendChild(timerElement);
-  }
 
-  const minutes = Math.floor(gameTimer / 60);
-  const seconds = gameTimer % 60;
-  timerElement.innerText = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-  if(gameTimer <= 0) {
-    background(255);
+
+function updateTimerDisplay() {
+  const timerElement = document.getElementById('game-timer');
+  if (timerElement) {
+    const minutes = Math.floor(gameTimer / 60);
+    const seconds = gameTimer % 60;
+    timerElement.innerText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 }
 
 function updateUserTable(userPoints) {
-  let tableContainer = document.getElementById('user-table-container');
-  if (!tableContainer) {
-    tableContainer = document.createElement('div');
-    tableContainer.id = 'user-table-container';
-    document.body.appendChild(tableContainer);
-  }
+  const container = document.getElementById('user-table-container');
+  if (!container) return;
 
+  // Tworzymy tabelę tylko jeśli nie istnieje
   let table = document.getElementById('user-table');
   if (!table) {
     table = document.createElement('table');
     table.id = 'user-table';
-    tableContainer.appendChild(table);
+    container.appendChild(table);
+    
+    // Nagłówki tabeli
+    const headerRow = table.insertRow();
+    const usernameHeader = headerRow.insertCell();
+    const pointsHeader = headerRow.insertCell();
+    usernameHeader.innerText = 'Username';
+    pointsHeader.innerText = 'Points';
+    usernameHeader.classList.add('header-cell');
+    pointsHeader.classList.add('header-cell');
   }
 
-  // Clear existing table content
-  table.innerHTML = '';
+  // Czyszczenie istniejących wierszy (oprócz nagłówka)
+  while (table.rows.length > 1) {
+    table.deleteRow(1);
+  }
 
-  // Create header
-  const headerRow = table.insertRow();
-  const usernameHeader = headerRow.insertCell();
-  const pointsHeader = headerRow.insertCell();
-  usernameHeader.innerText = 'Username';
-  pointsHeader.innerText = 'Points';
+  // Sortowanie graczy według punktów (malejąco)
+  const sortedPlayers = Object.entries(userPoints)
+    .sort((a, b) => b[1] - a[1]);
 
-  // Add user data
-  for (const [username, points] of Object.entries(userPoints)) {
+  // Dodawanie graczy do tabeli
+  for (const [username, points] of sortedPlayers) {
     const row = table.insertRow();
     const usernameCell = row.insertCell();
     const pointsCell = row.insertCell();
+    
     usernameCell.innerText = username;
     pointsCell.innerText = points;
+    
+    // Podświetlenie aktualnego użytkownika
+    if (username === sessionStorage.getItem('username')) {
+      row.classList.add('current-user');
+    }
   }
 }
+
 
 socket.on('message', (msg) => {
   console.log('Received message:', msg); // Debug log
@@ -288,6 +295,10 @@ socket.on('clear', () => {
 });
 
 socket.on('gameEndedPlayersLeft', () => {
+  const overlay = document.createElement('div');
+  overlay.className = 'end-game-overlay';
+  document.body.appendChild(overlay);
+
   canvas.hide();
   slider.hide();
   picker.hide();
@@ -297,20 +308,11 @@ socket.on('gameEndedPlayersLeft', () => {
   document.getElementById('word-display-container').style.display = 'none';
 
   if (!document.getElementById('center-table')) {
-
     let originalTable = document.getElementById('user-table');
     let centerTable = originalTable.cloneNode(true);
 
     centerTable.id = 'center-table';
-    centerTable.style.position = 'absolute';
-    centerTable.style.left = '50%';
-    centerTable.style.top = '50%';
-    centerTable.style.transform = 'translate(-50%, -50%)';
-    centerTable.style.fontSize = '48px';
-    centerTable.style.border = '2px solid black';
-    centerTable.style.borderCollapse = 'collapse';
-    centerTable.style.padding = '30px';
-
+    centerTable.className = 'end-game-table'; // Dodajemy klasę dla stylowania
     document.body.appendChild(centerTable);
   }
 
@@ -318,25 +320,16 @@ socket.on('gameEndedPlayersLeft', () => {
     let backButton = document.createElement('button');
     backButton.id = 'back-to-lobby-btn';
     backButton.textContent = 'Powrót do lobby';
-    backButton.style.position = 'absolute';
-    backButton.style.left = '50%';
-    backButton.style.top = '60%';
-    backButton.style.transform = 'translateX(-50%)';
-    backButton.style.fontSize = '18px';
-    backButton.style.borderRadius = '5px';
-    backButton.style.cursor = 'pointer';
-
+    backButton.className = 'end-game-button'; // Dodajemy klasę dla stylowania
+    
     backButton.onclick = function() {
-      // Clear session storage to reset username and room
       sessionStorage.removeItem('username');
       sessionStorage.removeItem('room');
-      // Redirect to index.html (lobby)
       window.location.href = '/index.html';
     };
 
     document.body.appendChild(backButton);
   }
- // alert('Koniec gry - za mało graczy');
 });
 
 socket.on('gameEndedNoRoundsLeft', () => {
@@ -393,7 +386,7 @@ socket.on('gameEndedNoRoundsLeft', () => {
 function setup() {
   canvas = createCanvas(1200, 800);
   background(255);
-  canvas.position(560, 110);
+  canvas.position(350, 150);
   slider = createSlider(1, 80, 40);
   slider.position(950, 845);
   canvas.style("z-index: -2");
