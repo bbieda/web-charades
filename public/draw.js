@@ -305,7 +305,6 @@ socket.on('gameEndedPlayersLeft', () => {
 
   document.getElementById('user-table-container').style.display = 'none';
   document.getElementById('game-timer').style.display = 'none';
-  document.getElementById('word-display-container').style.display = 'none';
 
   if (!document.getElementById('center-table')) {
     let originalTable = document.getElementById('user-table');
@@ -339,7 +338,7 @@ socket.on('gameEndedNoRoundsLeft', () => {
 
   document.getElementById('user-table-container').style.display = 'none';
   document.getElementById('game-timer').style.display = 'none';
-  document.getElementById('word-display-container').style.display = 'none';
+
 
   if (!document.getElementById('center-table')) {
 
