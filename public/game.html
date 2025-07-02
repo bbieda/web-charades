@@ -10,30 +10,82 @@
   <script src="https://kit.fontawesome.com/a076d05399.js"></script>
   <script src="draw.js"></script>
 </head>
-<body>
-  <div id="word-display-container" style="position: fixed; top: 0; left: 50%; transform: translateX(-50%); text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-    <h2>Word to guess:</h2>
-    <div id="word-display" style="display: inline-block;"></div>
-  </div>
-
-  <div style="margin-top: 120px;">
-    <h1>Charades Online</h1>
-    <p>Room: <span id="room-name"></span> | Username: <span id="username"></span></p>
-
-    <div id="canvas-container"></div>
-
-    <input id="guess" placeholder="Enter your guess" autocomplete="off">
-    <button onclick="sendGuess()">Send Guess</button>
-    <ul id="messages"></ul>
-  </div>
-  <div id="error-overlay"
-    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.8); z-index:9999; text-align:center; padding-top:200px;">
-    <div style="background:#333; color:white; padding:30px; border-radius:10px; display:inline-block;">
-      <p id="error-message" style="font-size:24px; margin-bottom:20px;"></p>
-      <button onclick="goBackToLobby()"
-        style="padding:10px 20px; font-size:16px; background:#555; color:white; border:none; border-radius:5px; cursor:pointer;">Back
-        to Lobby</button>
+<body class="game-page">
+  <div id="star-background"></div>
+  
+  <div class="game-header">
+    <h1 class="game-title">Charades Online</h1>
+    <div class="game-info">
+      <div>Room: <span id="room-name"></span></div>
+      <div>Username: <span id="username"></span></div>
     </div>
   </div>
+
+  <div class="main-content">
+    <!-- Lewa kolumna - Statystyki -->
+    <div class="game-stats">
+      <div class="timer-section">
+        <div class="timer-label">Time</div>
+        <div id="game-timer">1:30</div>
+      </div>
+      <div class="points-section">
+        <div class="points-label">Players Points</div>
+        <div id="user-table-container"></div>
+      </div>
+    </div>
+    
+    <!-- Środkowa kolumna - Canvas -->
+    <div class="canvas-container">
+      <!-- Kontener na przyciski gry -->
+      <div id="game-controls"></div>
+      <!-- Canvas zostanie utworzony przez p5.js -->
+    </div>
+    
+    <!-- Prawa kolumna - Czat -->
+    <div class="chat-section">
+      <ul id="messages"></ul>
+      <div class="guess-form">
+        <input id="guess" placeholder="Enter your guess" autocomplete="off">
+        <button class="send-guess-btn" onclick="sendGuess()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Create starry background
+    function createStars() {
+      const container = document.getElementById('star-background');
+      const starsCount = 150;
+      
+      for (let i = 0; i < starsCount; i++) {
+        const star = document.createElement('div');
+        star.classList.add('star');
+        
+        const size = Math.random() * 3;
+        const posX = Math.random() * 100;
+        const posY = Math.random() * 100;
+        const duration = Math.random() * 5 + 3;
+        const delay = Math.random() * 5;
+        
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.left = `${posX}%`;
+        star.style.top = `${posY}%`;
+        star.style.animationDuration = `${duration}s`;
+        star.style.animationDelay = `${delay}s`;
+        star.style.setProperty('--duration', `${duration}s`);
+        
+        container.appendChild(star);
+      }
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+      createStars();
+      
+      // Display user info
+      document.getElementById('room-name').innerText = sessionStorage.getItem('room');
+      document.getElementById('username').innerText = sessionStorage.getItem('username');
+    });
+  </script>
 </body>
 </html>
