@@ -305,7 +305,6 @@ socket.on('gameEndedPlayersLeft', () => {
 
   document.getElementById('user-table-container').style.display = 'none';
   document.getElementById('game-timer').style.display = 'none';
-  document.getElementById('word-display-container').style.display = 'none';
 
   if (!document.getElementById('center-table')) {
     let originalTable = document.getElementById('user-table');
@@ -321,7 +320,7 @@ socket.on('gameEndedPlayersLeft', () => {
     backButton.id = 'back-to-lobby-btn';
     backButton.textContent = 'Powrót do lobby';
     backButton.className = 'end-game-button'; // Dodajemy klasę dla stylowania
-    
+
     backButton.onclick = function() {
       sessionStorage.removeItem('username');
       sessionStorage.removeItem('room');
@@ -339,7 +338,7 @@ socket.on('gameEndedNoRoundsLeft', () => {
 
   document.getElementById('user-table-container').style.display = 'none';
   document.getElementById('game-timer').style.display = 'none';
-  document.getElementById('word-display-container').style.display = 'none';
+
 
   if (!document.getElementById('center-table')) {
 

@@ -5,7 +5,6 @@ const socketIo = require('socket.io');
 const fs = require('fs');
 const words = JSON.parse(fs.readFileSync('./words.json', 'utf8'));
 
-
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -112,7 +111,6 @@ io.on('connection', (socket) => {
         painter: roomData.painter,
         gameWasStartedOnce: roomData.gameWasStartedOnce,
         maxRounds: roomData.maxRounds
-
       });
       // Send specific state to creator
       const creatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === room);
@@ -141,10 +139,10 @@ io.on('connection', (socket) => {
     }
   });
 
-    socket.on('selectWord', ({ room, word }) => {
-      const roomData = rooms.get(room);
-      if (roomData && roomData.painter === socket.username && roomData.gameStarted) {
-        roomData.currentWord = word;
+  socket.on('selectWord', ({ room, word }) => {
+    const roomData = rooms.get(room);
+    if (roomData && roomData.painter === socket.username && roomData.gameStarted) {
+      roomData.currentWord = word;
 
       io.to(room).emit('painterStatus', { isPainter: false });
 
@@ -158,11 +156,9 @@ io.on('connection', (socket) => {
       const hiddenWord = '_'.repeat(word.length);
       socket.to(room).emit('wordUpdate', { word: hiddenWord, isPainter: false });
 
-        io.to(room).emit('systemNotification', `${socket.username} has chosen a word and started drawing!`);
-      }
-    });
-
-
+      io.to(room).emit('systemNotification', `${socket.username} has chosen a word and started drawing!`);
+    }
+  });
 
   socket.on('startGame', ({ room }) => {
     const roomData = rooms.get(room);
@@ -236,6 +232,7 @@ io.on('connection', (socket) => {
           io.to(room).emit('gameEnded');
           io.to(room).emit('systemNotification', 'Time is up! Game ended.');
           io.to(room).emit('wordUpdate', { word: '', isPainter: false });
+          io.to(room).emit('clear');
 
           // Update game state for all users
           const userPointsObj = Object.fromEntries(roomData.userPoints);
@@ -248,7 +245,6 @@ io.on('connection', (socket) => {
             painter: roomData.painter,
             gameWasStartedOnce: roomData.gameWasStartedOnce,
             maxRounds: roomData.maxRounds
-
           });
           // Send creator state to creator
           const creatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === room);
@@ -262,7 +258,6 @@ io.on('connection', (socket) => {
               painter: roomData.painter,
               gameWasStartedOnce: roomData.gameWasStartedOnce,
               maxRounds: roomData.maxRounds
-
             });
           }
         }
@@ -278,8 +273,10 @@ io.on('connection', (socket) => {
     if (data.guess.trim().toLowerCase() === roomData.currentWord?.toLowerCase()) {
       if (!roomData.guessedCorrectly.has(data.username)) {
         roomData.guessedCorrectly.add(data.username);
-        roomData.userPoints.set(data.username, (roomData.userPoints.get(data.username) || 0) + 5); // bonus za trafienie
-        io.to(data.room).emit('systemNotification', `${data.username} guessed the correct word!`);
+        // Award points equal to remaining time
+        const pointsToAdd = Math.floor(roomData.gameTimer);
+        roomData.userPoints.set(data.username, (roomData.userPoints.get(data.username) || 0) + pointsToAdd);
+        io.to(data.room).emit('systemNotification', `${data.username} guessed the correct word and earned ${pointsToAdd} points!`);
       }
 
       // Update state
@@ -345,9 +342,6 @@ io.on('connection', (socket) => {
     }
 
     if (roomData && roomData.gameStarted) {
-      // Award point for making a guess (you can modify this logic as needed)
-      roomData.userPoints.set(data.username, (roomData.userPoints.get(data.username) || 0) + 1);
-
       // Broadcast the guess
       io.to(data.room).emit('guessMade', { username: data.username, guess: data.guess });
 
@@ -394,89 +388,73 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-  console.log('User disconnected:', socket.id);
-  if (socket.room && socket.username) {
-    const userKey = `${socket.username}:${socket.room}`;
+    console.log('User disconnected:', socket.id);
+    if (socket.room && socket.username) {
+      const userKey = `${socket.username}:${socket.room}`;
 
-    // one player handling
-    if (userSockets.get(userKey) === socket.id) {
-      const roomData = rooms.get(socket.room);
-      if (roomData) {
-        // immediately delete player
-        roomData.users.delete(socket.username);
-        roomData.userPoints.delete(socket.username);
-        userSockets.delete(userKey);
+      // one player handling
+      if (userSockets.get(userKey) === socket.id) {
+        const roomData = rooms.get(socket.room);
+        if (roomData) {
+          // immediately delete player
+          roomData.users.delete(socket.username);
+          roomData.userPoints.delete(socket.username);
+          userSockets.delete(userKey);
 
-        // check if only one left
-        if (roomData.users.size === 1) {
-          if (roomData.gameStarted || roomData.gameWasStartedOnce) {
-            console.log(`Game ended in room ${socket.room}, because other players left`);
+          // check if only one left
+          if (roomData.users.size === 1) {
+            if (roomData.gameStarted || roomData.gameWasStartedOnce) {
+              console.log(`Game ended in room ${socket.room}, because other players left`);
+              roomData.gameStarted = false;
+              roomData.gameTimer = 0;
+              roomData.painter = ''; // Clear painter
+              roomData.currentWord = null; // Clear current word
+              roomData.roundsPlayed.clear(); // Clear rounds played
+              io.to(socket.room).emit('gameEndedPlayersLeft');
+              io.to(socket.room).emit('wordUpdate', { word: '', isPainter: false });
+            }
+          }
+
+          if (roomData.users.size === 0) {
+            rooms.delete(socket.room);
+          } else if (roomData.creator === socket.username) {
+            // Reassign creator if the creator leaves
+            roomData.creator = roomData.users.values().next().value || '';
+            // Reset game state when creator leaves
             roomData.gameStarted = false;
-            roomData.gameTimer = 0;
+            roomData.gameTimer = 90;
             roomData.painter = ''; // Clear painter
             roomData.currentWord = null; // Clear current word
             roomData.roundsPlayed.clear(); // Clear rounds played
-            io.to(socket.room).emit('gameEndedPlayersLeft');
-            io.to(socket.room).emit('wordUpdate', { word: '', isPainter: false });
-          }
-        }
-
-
-        if (roomData.users.size === 0) {
-          rooms.delete(socket.room);
-        } else if (roomData.creator === socket.username) {
-          // Reassign creator if the creator leaves
-          roomData.creator = roomData.users.values().next().value || '';
-          // Reset game state when creator leaves
-          roomData.gameStarted = false;
-          roomData.gameTimer = 90;
-          roomData.painter = ''; // Clear painter
-          roomData.currentWord = null; // Clear current word
-          roomData.roundsPlayed.clear(); // Clear rounds played
-          const userPointsObj = Object.fromEntries(roomData.userPoints);
-          io.to(socket.room).emit('gameState', {
-            gameStarted: false,
-            isCreator: false,
-            canStart: roomData.users.size > 1,
-            userPoints: userPointsObj,
-            gameTimer: roomData.gameTimer,
-            gameWasStartedOnce: roomData.gameWasStartedOnce,
-            maxRounds: roomData.maxRounds
-
-          });
-          // Send creator state to new creator
-          const newCreatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === socket.room);
-          if (newCreatorSocket) {
-            newCreatorSocket.emit('gameState', {
+            const userPointsObj = Object.fromEntries(roomData.userPoints);
+            io.to(socket.room).emit('gameState', {
               gameStarted: false,
-              isCreator: true,
+              isCreator: false,
               canStart: roomData.users.size > 1,
               userPoints: userPointsObj,
               gameTimer: roomData.gameTimer,
               gameWasStartedOnce: roomData.gameWasStartedOnce,
               maxRounds: roomData.maxRounds
             });
-          }
-        } else {
-          // Update game state for remaining users
-          const userPointsObj = Object.fromEntries(roomData.userPoints);
-          io.to(socket.room).emit('gameState', {
-            gameStarted: roomData.gameStarted,
-            isCreator: false,
-            canStart: roomData.users.size > 1 && !roomData.gameStarted,
-            userPoints: userPointsObj,
-            gameTimer: roomData.gameTimer,
-            painter: roomData.painter,
-            gameWasStartedOnce: roomData.gameWasStartedOnce,
-            maxRounds: roomData.maxRounds
-
-          });
-          // Send creator state to creator
-          const creatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === socket.room);
-          if (creatorSocket) {
-            creatorSocket.emit('gameState', {
+            // Send creator state to new creator
+            const newCreatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === socket.room);
+            if (newCreatorSocket) {
+              newCreatorSocket.emit('gameState', {
+                gameStarted: false,
+                isCreator: true,
+                canStart: roomData.users.size > 1,
+                userPoints: userPointsObj,
+                gameTimer: roomData.gameTimer,
+                gameWasStartedOnce: roomData.gameWasStartedOnce,
+                maxRounds: roomData.maxRounds
+              });
+            }
+          } else {
+            // Update game state for remaining users
+            const userPointsObj = Object.fromEntries(roomData.userPoints);
+            io.to(socket.room).emit('gameState', {
               gameStarted: roomData.gameStarted,
-              isCreator: true,
+              isCreator: false,
               canStart: roomData.users.size > 1 && !roomData.gameStarted,
               userPoints: userPointsObj,
               gameTimer: roomData.gameTimer,
@@ -484,14 +462,27 @@ io.on('connection', (socket) => {
               gameWasStartedOnce: roomData.gameWasStartedOnce,
               maxRounds: roomData.maxRounds
             });
+            // Send creator state to creator
+            const creatorSocket = [...io.sockets.sockets.values()].find(s => s.username === roomData.creator && s.room === socket.room);
+            if (creatorSocket) {
+              creatorSocket.emit('gameState', {
+                gameStarted: roomData.gameStarted,
+                isCreator: true,
+                canStart: roomData.users.size > 1 && !roomData.gameStarted,
+                userPoints: userPointsObj,
+                gameTimer: roomData.gameTimer,
+                painter: roomData.painter,
+                gameWasStartedOnce: roomData.gameWasStartedOnce,
+                maxRounds: roomData.maxRounds
+              });
+            }
           }
+          io.to(socket.room).emit('systemNotification', socket.username + ' left the room');
+          io.to(socket.room).emit('wordUpdate', { word: '', isPainter: false });
         }
-        io.to(socket.room).emit('systemNotification', socket.username + ' left the room');
-        io.to(socket.room).emit('wordUpdate', { word: '', isPainter: false });
       }
     }
-  }
-});
+  });
 });
 
 server.listen(3000, () => {

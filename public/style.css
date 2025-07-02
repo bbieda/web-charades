@@ -52,6 +52,8 @@ body {
   z-index: 10;
 }
 
+
+
 .game-header {
   margin-bottom: 2rem;
   text-align: center;
@@ -353,8 +355,8 @@ canvas {
 #start-button {
   position: absolute;
   top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  left: 45%;
+  transform: translate(0%, 8%);
   padding: 1rem 2rem;
   border: none;
   border-radius: 50px;
@@ -553,6 +555,9 @@ input[type="color"]::-webkit-color-swatch {
   height: 100%;
   background: rgba(10, 10, 30, 0.95);
   z-index: 999;
+  end-game-table.style.zIndex = '1000';
+  end-game-button.style.zIndex = '1000';
+
 }
 
 .end-game-table {
