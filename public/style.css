@@ -208,8 +208,8 @@ canvas {
 
 /* ZMIANA: Sekcja czatu z ustaloną wysokością */
 .chat-section {
-  height: 800px; /* Taka sama wysokość jak canvas */
-  width: 300px; /* Stała szerokość */
+  height: 800px; /* Fixed height, same as canvas */
+  width: 300px; /* Fixed width */
   display: flex;
   flex-direction: column;
   background: rgba(255, 255, 255, 0.08);
@@ -221,6 +221,12 @@ canvas {
 }
 
 #messages {
+  max-height: 800px; /* Adjust as needed */
+  overflow-y: auto; /* Enable vertical scrolling */
+  list-style-type: none;
+  padding: 10px;
+  margin: 0;
+  border: 1px solid #ccc; /* Optional for visibility */
   flex: 1;
   list-style: none;
   overflow-y: auto;
@@ -228,6 +234,7 @@ canvas {
   padding: 0.5rem;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 10px;
+
 }
 
 #messages li {

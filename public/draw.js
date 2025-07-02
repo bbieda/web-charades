@@ -28,6 +28,10 @@ function sendGuess() {
     li.innerText = `${username} guessed: ${guess}`;
     document.getElementById('messages').appendChild(li);
     document.getElementById('guess').value = '';
+    const messagesEl = document.getElementById('messages');
+    if (messagesEl) {
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        }// Use the reusable scroll function // Scroll to bottom after adding local guess
     }
   } else {
     alert('Please enter a guess or ensure you are logged in');
@@ -229,8 +233,10 @@ socket.on('message', (msg) => {
   li.innerText = msg;
   document.getElementById('messages').appendChild(li);
   const messagesEl = document.getElementById('messages');
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-});
+  if (messagesEl) {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }// Use the reusable scroll function// Use the reusable scroll function
+ });
 
 socket.on('systemNotification', (msg) => {
   console.log('Received system notification:', msg); // Debug log
@@ -239,6 +245,10 @@ socket.on('systemNotification', (msg) => {
   li.style.fontStyle = 'italic';
   li.style.color = '#888';
   document.getElementById('messages').appendChild(li);
+  const messagesEl = document.getElementById('messages');
+  if (messagesEl) {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }// Use the reusable scroll function Use the reusable scroll function
 });
 
 socket.on('guessMade', (data) => {
@@ -249,7 +259,9 @@ socket.on('guessMade', (data) => {
     li.innerText = `${data.username} guessed: ${data.guess}`;
     document.getElementById('messages').appendChild(li);
     const messagesEl = document.getElementById('messages');
-    messagesEl.scrollTop = messagesEl.scrollHeight;
+    if (messagesEl) {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }// Use the reusable scroll function
   }
 });
 
