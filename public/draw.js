@@ -305,6 +305,7 @@ socket.on('gameEndedPlayersLeft', () => {
 
   document.getElementById('user-table-container').style.display = 'none';
   document.getElementById('game-timer').style.display = 'none';
+  document.getElementById('word-display-container').style.display = 'none';
 
   if (!document.getElementById('center-table')) {
     let originalTable = document.getElementById('user-table');
@@ -320,7 +321,7 @@ socket.on('gameEndedPlayersLeft', () => {
     backButton.id = 'back-to-lobby-btn';
     backButton.textContent = 'Powrót do lobby';
     backButton.className = 'end-game-button'; // Dodajemy klasę dla stylowania
-
+    
     backButton.onclick = function() {
       sessionStorage.removeItem('username');
       sessionStorage.removeItem('room');
@@ -338,7 +339,7 @@ socket.on('gameEndedNoRoundsLeft', () => {
 
   document.getElementById('user-table-container').style.display = 'none';
   document.getElementById('game-timer').style.display = 'none';
-
+  document.getElementById('word-display-container').style.display = 'none';
 
   if (!document.getElementById('center-table')) {
 
@@ -387,7 +388,7 @@ function setup() {
   background(255);
   canvas.position(350, 150);
   slider = createSlider(1, 80, 40);
-  slider.position(950, 845);
+  slider.position(950, 860);
   canvas.style("z-index: -2");
   picker = createColorPicker();
   picker.position(1150, 845);
@@ -517,7 +518,7 @@ function addFillButton() {
     fillBtn.innerHTML = '<img src="bucket.png" style="width: 20px; height: 20px;">';
     fillBtn.style.position = 'absolute';
     fillBtn.style.left = '900px';
-    fillBtn.style.top = '845px';
+    fillBtn.style.top = '855px';
     fillBtn.style.zIndex = '2';
     fillBtn.onclick = () => {
       fillMode = !fillMode;
