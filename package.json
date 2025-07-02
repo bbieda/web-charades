@@ -1,0 +1,14 @@
+{
+  "name": "charades-online",
+  "version": "1.0.0",
+  "description": "Multiplayer drawing and guessing game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+
+  "dependencies": {
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1"
+  }
+}
