@@ -389,10 +389,10 @@ function setup() {
   background(255);
   canvas.position(350, 150);
   slider = createSlider(1, 80, 40);
-  slider.position(950, 860);
+  slider.position(750, 895);
   canvas.style("z-index: -2");
   picker = createColorPicker();
-  picker.position(1150, 845);
+  picker.position(625, 870);
   updateCursor(slider.value());
   canvas.style("z-index", "1");
   picker.style("z-index", "1");
@@ -518,8 +518,8 @@ function addFillButton() {
     fillBtn.id = 'fill-button';
     fillBtn.innerHTML = '<img src="bucket.png" style="width: 20px; height: 20px;">';
     fillBtn.style.position = 'absolute';
-    fillBtn.style.left = '900px';
-    fillBtn.style.top = '855px';
+    fillBtn.style.left = '700px';
+    fillBtn.style.top = '885px';
     fillBtn.style.zIndex = '2';
     fillBtn.onclick = () => {
       fillMode = !fillMode;
